@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  quantfoot-api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
