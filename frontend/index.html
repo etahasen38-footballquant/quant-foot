@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="tr" class="light-mode">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuantFoot — Maç Bazlı Dinamik Oyuncu Değerleme ve Elo Platformu</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      --bg-body: #090e1a;
+      --bg-card: rgba(19, 28, 46, 0.94);
+      --border-card: rgba(148, 163, 184, 0.18);
+      --text-main: #f8fafc;
+    }
+    html.light-mode body {
+      background-color: #f4f6f9 !important;
+      color: #0f172a !important;
+    }
+    html.light-mode .glass-card {
+      background: #ffffff !important;
+      border: 1px solid #dce3ec !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    }
+    html.light-mode header {
+      background-color: #0d2137 !important;
+      border-color: #1e3a5f !important;
+    }
+    html.light-mode header .header-title {
+      color: #ffffff !important;
+    }
+    html.light-mode footer {
+      background-color: #ffffff !important;
+      border-color: #dce3ec !important;
+      color: #475569 !important;
+    }
+    html.light-mode .text-white {
+      color: #0f172a !important;
+    }
+    html.light-mode .text-slate-200,
+    html.light-mode .text-slate-300 {
+      color: #1e293b !important;
+    }
+    html.light-mode .text-slate-400 {
+      color: #475569 !important;
+    }
+    html.light-mode .text-emerald-400 {
+      color: #047857 !important;
+    }
+    html.light-mode .text-cyan-400,
+    html.light-mode .text-cyan-300 {
+      color: #0369a1 !important;
+    }
+    html.light-mode .text-amber-400,
+    html.light-mode .text-amber-300 {
+      color: #b45309 !important;
+    }
+    html.light-mode .text-rose-400 {
+      color: #be123c !important;
+    }
+    html.light-mode .bg-slate-900,
+    html.light-mode .bg-slate-900\/90,
+    html.light-mode .bg-slate-900\/80,
+    html.light-mode .bg-slate-900\/70,
+    html.light-mode .bg-slate-950 {
+      background-color: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    html.light-mode .bg-slate-800 {
+      background-color: #e2e8f0 !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+    }
+    html.light-mode .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]),
+    html.light-mode .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+      border-color: #e2e8f0 !important;
+    }
+    html.light-mode .profile-banner {
+      background: linear-gradient(135deg, #0d2137 0%, #163a59 100%) !important;
+      color: #ffffff !important;
+    }
+    html.light-mode .profile-banner .text-white {
+      color: #ffffff !important;
+    }
+    html.light-mode .profile-banner .text-slate-300 {
+      color: #cbd5e1 !important;
+    }
+    html.light-mode .mv-highlight-box {
+      background: #059669 !important;
+      color: #ffffff !important;
+    }
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.5;
+    }
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-card);
+    }
+    .mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ÜST BİLGİ VE SADE NAVİGASYON ÇUBUĞU -->
+  <header class="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow">
+          <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l4-4 4 4 5-6" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="header-title font-extrabold text-xl tracking-tight text-white">QuantFoot</span>
+            <span class="text-[11px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-bold">CANLI DEĞER & ELO</span>
+          </div>
+          <p class="text-xs text-slate-300">Maç Performansına Dayalı Dinamik Oyuncu Piyasa Değerleri ve Kulüp Elo Sıralaması</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-mono text-emerald-300 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+          ● Otomatik Güncel Veri: Kasım 2026
+        </span>
+        <button id="btn-theme-toggle" onclick="toggleReadabilityTheme()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all">
+          ☀️ Açık / Koyu Görünüm
+        </button>
+      </div>
+    </div>
+
+    <!-- SADE ANA MENÜ (5 TEMEL SAYFA) -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 pb-2.5 overflow-x-auto">
+      <nav class="flex items-center gap-1.5 w-max sm:w-full" aria-label="Ana Menü">
+        <button id="nav-dashboard" onclick="switchTab('dashboard')" class="nav-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all bg-emerald-500 text-slate-950 shadow">
+          🏆 En Değerli Oyuncular
+        </button>
+        <button id="nav-elo-rankings" onclick="switchTab('elo-rankings')" class="nav-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-200 hover:bg-white/10">
+          📊 Elo Rating Sıralaması
+        </button>
+        <button id="nav-matches" onclick="switchTab('matches')" class="nav-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-200 hover:bg-white/10">
+          ⚽ Son Maçlar & Değer Değişimleri
+        </button>
+        <button id="nav-club-profile" onclick="switchTab('club-profile')" class="nav-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-200 hover:bg-white/10">
+          🛡️ Kulüp Profilleri
+        </button>
+        <button id="nav-player-profile" onclick="switchTab('player-profile')" class="nav-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-200 hover:bg-white/10">
+          👤 Oyuncu Profili
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- ANA İÇERİK ALANI -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- ÜST ÖZET KARTLARI -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="glass-card rounded-xl p-4">
+        <div class="text-xs font-semibold text-slate-400">Dünyanın En Değerli Oyuncusu</div>
+        <div id="kpi-top-player" class="text-lg sm:text-xl font-extrabold text-white mt-0.5 truncate">Lamine Yamal</div>
+        <div id="kpi-top-player-sub" class="text-xs font-bold text-emerald-400 mono-num mt-0.5">€218.45M • 7.93 Maç Puanı</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4">
+        <div class="text-xs font-semibold text-slate-400">Avrupa Elo Lideri Kulüp</div>
+        <div id="kpi-top-team" class="text-lg sm:text-xl font-extrabold text-white mono-num mt-0.5">Arsenal (2047)</div>
+        <div id="kpi-tr-leader" class="text-xs text-slate-400 mt-0.5">TR Lideri: Galatasaray (1824 Elo)</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4">
+        <div class="text-xs font-semibold text-slate-400">Kapsanan Lig & Kulüp Havuzu</div>
+        <div id="kpi-total-mv" class="text-lg sm:text-xl font-extrabold text-white mono-num mt-0.5">20 Avrupa Ligi</div>
+        <div class="text-xs text-slate-400 mt-0.5">80 Kulüp • Ulusal Lig, UCL & Milli Maçlar</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4">
+        <div class="text-xs font-semibold text-slate-400">Maç Bazlı Değerleme Kuralı</div>
+        <div id="kpi-processed-matches" class="text-lg sm:text-xl font-extrabold text-white mono-num mt-0.5">Kronolojik Aktif</div>
+        <div class="text-xs text-slate-400 mt-0.5">6.80+ Puan = Artış • UCL = Yüksek Etki</div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- SAYFA 1: DÜNYADAKİ EN DEĞERLİ OYUNCULAR (FİLTRELİ ANA TABLO)         -->
+    <!-- =================================================================== -->
+    <section id="tab-dashboard" class="space-y-6">
+      <div class="glass-card rounded-xl p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-400 mr-1">Lig Kademesi:</span>
+            <button id="btn-tier-all" onclick="setTierQuickFilter('ALL')" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs transition-all">Tüm Avrupa (20 Lig)</button>
+            <button id="btn-tier-1" onclick="setTierQuickFilter('TIER1')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-all">Top-5 Lig (ENG / ESP / ITA / GER / FRA)</button>
+            <button id="btn-tier-2" onclick="setTierQuickFilter('TIER2')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-all">Süper Lig / Portekiz / Hollanda / Belçika</button>
+            <button id="btn-tier-3" onclick="setTierQuickFilter('TIER3')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-all">Diğer Avrupa Ligleri</button>
+          </div>
+          <span id="player-count-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300">75 Oyuncu</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 pt-2 border-t border-slate-800/40">
+          <input id="filter-search" type="text" oninput="renderDashboard()" placeholder="🔍 Oyuncu, kulüp veya ülke ara..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500" />
+
+          <select id="filter-league" onchange="onLeagueFilterChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="ALL">Tüm Ligler (20 Lig)</option>
+          </select>
+
+          <select id="filter-team" onchange="renderDashboard()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="ALL">Tüm Kulüpler</option>
+          </select>
+
+          <select id="filter-pos" onchange="renderDashboard()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="ALL">Tüm Mevkiler</option>
+            <option value="FW">Santrfor (FW)</option>
+            <option value="W">Kanat (W)</option>
+            <option value="AM">Ofansif Orta Saha (AM)</option>
+            <option value="CM">Merkez Orta Saha (CM)</option>
+            <option value="DM">Ön Libero (DM)</option>
+            <option value="FB">Bek / Kanat Bek (FB)</option>
+            <option value="CB">Stoper (CB)</option>
+            <option value="GK">Kaleci (GK)</option>
+          </select>
+
+          <select id="filter-age-group" onchange="renderDashboard()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="ALL">Tüm Yaş Grupları</option>
+            <option value="U21">U21 Genç Yıldızlar (≤21)</option>
+            <option value="U24">U24 Gelişim Çağı (≤24)</option>
+            <option value="PRIME">Tepe Yaş (24 – 29)</option>
+            <option value="VET">Tecrübeli (30+ Yaş)</option>
+          </select>
+
+          <select id="filter-sort" onchange="renderDashboard()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="mv_desc">Sırala: Piyasa Değeri (Azalan)</option>
+            <option value="mv_asc">Sırala: Piyasa Değeri (Artan)</option>
+            <option value="elo_desc">Sırala: Oyuncu Elo Puanı</option>
+            <option value="rating_desc">Sırala: Sezon Ort. Maç Puanı</option>
+            <option value="delta_desc">Sırala: Son Maç Değer Artışı</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- OYUNCU LİSTESİ -->
+      <div class="glass-card rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-800/50 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-white">Dünyadaki En Değerli Oyuncular (2026/27 Kadroları)</h2>
+            <p class="text-xs text-slate-400">Her oyuncunun güncel değeri, oynadığı resmi lig, Şampiyonlar Ligi ve milli maç performans puanlarından ($1.00 - 10.00$) türetilmiştir.</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-900/90 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/60">
+                <th class="py-3.5 px-4 w-12">#</th>
+                <th class="py-3.5 px-4">Oyuncu</th>
+                <th class="py-3.5 px-3">Güncel Kulüp & Lig</th>
+                <th class="py-3.5 px-3 text-center">Mevki</th>
+                <th class="py-3.5 px-2 text-center">Yaş</th>
+                <th class="py-3.5 px-3 text-center">Uyruk</th>
+                <th class="py-3.5 px-3 text-right">Oyuncu Elo</th>
+                <th class="py-3.5 px-3 text-center">Ort. Maç Puanı</th>
+                <th class="py-3.5 px-4 text-right">Güncel Piyasa Değeri</th>
+                <th class="py-3.5 px-3 text-right">Son Maç $\Delta V$</th>
+                <th class="py-3.5 px-4 text-center">İncele</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-player-tbody" class="divide-y divide-slate-800/60 text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- SAYFA 2: ELO RATING SIRALAMASI (KULÜP & OYUNCU FİLTRELİ)            -->
+    <!-- =================================================================== -->
+    <section id="tab-elo-rankings" class="hidden space-y-6">
+      <div class="glass-card rounded-xl p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/50 pb-4">
+          <div>
+            <h2 class="text-lg font-extrabold text-white">Avrupa Elo Rating Sıralaması (Kulüpler & Oyuncular)</h2>
+            <p class="text-xs text-slate-400">20 Avrupa ligindeki kulüplerin ve oyuncuların maç sonuçlarına göre hesaplanan güncel Elo dereceleri</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-elo-mode-clubs" onclick="setEloRankingMode('CLUBS')" class="px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs transition-all">
+              🛡️ Kulüp Elo Sıralaması (80 Kulüp)
+            </button>
+            <button id="btn-elo-mode-players" onclick="setEloRankingMode('PLAYERS')" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 font-semibold text-xs transition-all">
+              👤 Oyuncu Elo Sıralaması
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <input id="elo-filter-search" type="text" oninput="renderEloRankingsPage()" placeholder="🔍 Kulüp, oyuncu veya ülke ara..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-400" />
+
+          <select id="elo-filter-league" onchange="renderEloRankingsPage()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="ALL">Tüm Avrupa Ligleri (20 Lig)</option>
+          </select>
+
+          <select id="elo-filter-tier" onchange="renderEloRankingsPage()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="ALL">Tüm Lig Kademeleri</option>
+            <option value="1">Tier 1: Top-5 Lig</option>
+            <option value="2">Tier 2: Avrupa #6–#10 (Süper Lig dahil)</option>
+            <option value="3">Tier 3–4: Avrupa #11–#20</option>
+          </select>
+
+          <select id="elo-filter-uefa" onchange="renderEloRankingsPage()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="ALL">Tüm Avrupa Kupaları</option>
+            <option value="UCL">🏆 Şampiyonlar Ligi (UCL)</option>
+            <option value="UEL">🔶 Avrupa Ligi (UEL)</option>
+            <option value="UECL">🟢 Konferans Ligi (UECL)</option>
+          </select>
+
+          <select id="elo-filter-sort" onchange="renderEloRankingsPage()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="elo_desc">Sırala: Güncel Elo (Azalan)</option>
+            <option value="growth_5y">Sırala: 5 Yıllık Elo Artışı (2022→2026)</option>
+            <option value="delta_last">Sırala: Son Maç Elo Değişimi</option>
+          </select>
+        </div>
+
+        <div id="elo-rankings-table-wrap" class="overflow-x-auto border border-slate-800/50 rounded-xl"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- SAYFA 3: SON MAÇLAR & MAÇ BAZLI DEĞER DEĞİŞİMLERİ                   -->
+    <!-- =================================================================== -->
+    <section id="tab-matches" class="hidden space-y-6">
+      <div class="glass-card rounded-xl p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/50 pb-4">
+          <div>
+            <h2 class="text-lg font-extrabold text-white">Oynanan Maçlar & Oyuncu Değer Değişim Raporları</h2>
+            <p class="text-xs text-slate-400">Şampiyonlar Ligi, Ulusal Ligler ve Milli Maçlarda oyuncuların aldıkları maç puanları ($1.00 - 10.00$) ve kazandıkları/kaybettikleri net değerler</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="match-filter-comp" onchange="renderMatchesPage()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-slate-200">
+              <option value="ALL">Tüm Maçlar (Lig + Şampiyonlar Ligi + Milli Maç)</option>
+              <option value="UCL">🏆 UEFA Şampiyonlar Ligi & Avrupa Kupaları</option>
+              <option value="NAT">🏳️ Milli Maçlar (Uluslar Ligi & Dünya Kupası)</option>
+              <option value="DOMESTIC">⚽ Ulusal Lig Maçları (Süper Lig, LaLiga, EPL vb.)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="matches-feed-container" class="space-y-4"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- SAYFA 4: KULÜP PROFİLLERİ                                           -->
+    <!-- =================================================================== -->
+    <section id="tab-club-profile" class="hidden space-y-6">
+      <div class="glass-card rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <label for="club-profile-select" class="text-xs font-bold uppercase text-slate-400">Kulüp Seçin:</label>
+          <select id="club-profile-select" onchange="openClubProfile(this.value)" class="bg-slate-900 border border-emerald-500/60 rounded-xl px-4 py-2 text-sm font-bold text-white"></select>
+        </div>
+        <button onclick="switchTab('elo-rankings')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+          ← Kulüp Elo Sıralamasına Dön
+        </button>
+      </div>
+
+      <div class="profile-banner rounded-2xl p-6 shadow-lg flex flex-wrap items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div id="cp-badge-box" class="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-2xl font-extrabold text-white mono-num">
+            #1
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 id="cp-name" class="text-2xl sm:text-3xl font-extrabold text-white">Arsenal</h2>
+              <span id="cp-league-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-slate-950">ENG1 • UCL</span>
+            </div>
+            <p id="cp-subtitle" class="text-xs sm:text-sm text-slate-300 mt-1">Ülke: İngiltere • 5 Yıllık Elo Değişimi: +202</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-right">
+            <div class="text-[11px] uppercase tracking-wider text-slate-300">Güncel Kulüp Elo</div>
+            <div id="cp-elo-val" class="text-2xl font-extrabold text-white mono-num">2047.0</div>
+            <div id="cp-elo-delta" class="text-xs text-emerald-300 mono-num">Son Maç: +2.10</div>
+          </div>
+          <div class="mv-highlight-box rounded-xl px-5 py-3 text-right shadow">
+            <div class="text-[11px] uppercase tracking-wider font-semibold opacity-90">Kadro Piyasa Değeri</div>
+            <div id="cp-total-mv" class="text-2xl sm:text-3xl font-extrabold mono-num">€478.00M</div>
+            <div id="cp-player-count" class="text-xs opacity-90">Kayıtlı Oyuncu</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-7 glass-card rounded-xl overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-800/50">
+            <h3 class="text-base font-bold text-white">Kulüp Kadrosu & Oyuncu Değerleri</h3>
+            <p class="text-xs text-slate-400">Oyuncuya tıklayarak maç bazlı değer değişim geçmişini açabilirsin</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-slate-900/90 text-xs font-bold uppercase text-slate-400 border-b border-slate-800/60">
+                  <th class="py-3 px-4">Oyuncu</th>
+                  <th class="py-3 px-2 text-center">Mevki</th>
+                  <th class="py-3 px-2 text-center">Yaş</th>
+                  <th class="py-3 px-3 text-right">Elo</th>
+                  <th class="py-3 px-3 text-center">Maç Puanı</th>
+                  <th class="py-3 px-4 text-right">Piyasa Değeri</th>
+                </tr>
+              </thead>
+              <tbody id="cp-squad-tbody" class="divide-y divide-slate-800/60"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 glass-card rounded-xl p-5 space-y-4">
+          <div>
+            <h3 class="text-base font-bold text-white mb-1">Kulüp 5 Yıllık Elo Gelişimi (2022–2026)</h3>
+            <div class="relative h-60 w-full">
+              <canvas id="chart-cp-history"></canvas>
+            </div>
+          </div>
+          <div id="cp-recent-matches-box" class="space-y-2 pt-2 border-t border-slate-800/50"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- SAYFA 5: OYUNCU PROFİLİ & MAÇ BAZLI DEĞER GEÇMİŞİ                   -->
+    <!-- =================================================================== -->
+    <section id="tab-player-profile" class="hidden space-y-6">
+      <div class="glass-card rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <label for="pp-player-select" class="text-xs font-bold uppercase text-slate-400">Oyuncu Seçin:</label>
+          <select id="pp-player-select" onchange="openPlayerProfile(this.value)" class="bg-slate-900 border border-emerald-500/60 rounded-xl px-4 py-2 text-sm font-bold text-white"></select>
+        </div>
+        <button onclick="switchTab('dashboard')" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 text-xs font-semibold">
+          ← En Değerli Oyunculara Dön
+        </button>
+      </div>
+
+      <div class="profile-banner rounded-2xl p-6 shadow-lg flex flex-wrap items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div id="pp-avatar-initials" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center text-2xl sm:text-3xl font-extrabold shadow">
+            LY
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="pp-rank-badge" class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-mono text-xs font-extrabold">#1 Dünya</span>
+              <h2 id="pp-name" class="text-2xl sm:text-3xl font-extrabold text-white">Lamine Yamal</h2>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 mt-1.5 text-xs sm:text-sm text-slate-300">
+              <button id="pp-club-link" onclick="openClubProfile(3)" class="font-bold text-emerald-300 hover:underline">FC Barcelona</button>
+              <span>•</span>
+              <span id="pp-pos-label">Kanat (W)</span>
+              <span>•</span>
+              <span id="pp-nat-label">İspanya</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-right">
+            <div class="text-[11px] uppercase tracking-wider text-slate-300">Bireysel Elo & Maç Puanı</div>
+            <div id="pp-elo-rating" class="text-xl sm:text-2xl font-extrabold text-white mono-num">1965 Elo • 7.93</div>
+            <div id="pp-peak-mv" class="text-xs text-slate-300 mono-num mt-0.5">En Yüksek Değer: €220.00M</div>
+          </div>
+
+          <div class="mv-highlight-box rounded-xl px-5 py-3 text-right shadow">
+            <div class="text-[11px] uppercase tracking-wider font-semibold opacity-90">Güncel Piyasa Değeri</div>
+            <div id="pp-current-mv" class="text-2xl sm:text-3xl font-extrabold mono-num">€218.45M</div>
+            <div id="pp-last-delta" class="text-xs font-mono opacity-95 mt-0.5">Son Maç: +€450K</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 glass-card rounded-xl p-5 space-y-4">
+          <h3 class="text-base font-bold text-white border-b border-slate-800/50 pb-2">Oyuncu Kimlik & Sözleşme Bilgileri</h3>
+          <div id="pp-bio-grid" class="divide-y divide-slate-800/50 text-sm"></div>
+
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 pt-2">Değerleme Modeli Çarpanları</h4>
+          <div id="pp-multipliers-grid" class="grid grid-cols-2 gap-2.5 text-xs"></div>
+        </div>
+
+        <div class="lg:col-span-7 glass-card rounded-xl p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <h3 class="text-base font-bold text-white mb-1">5 Yıllık Piyasa Değeri & Elo Gelişimi (2022–2026)</h3>
+            <div class="relative h-60 w-full">
+              <canvas id="chart-pp-history"></canvas>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Oyuncunun Maç Bazlı Performans ve Değer Değişim Kayıtları</h4>
+            <div class="overflow-x-auto border border-slate-800/50 rounded-xl max-h-56">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-900 text-slate-400 border-b border-slate-800/60">
+                    <th class="py-2 px-3">Tarih & Turnuva</th>
+                    <th class="py-2 px-3">Maç</th>
+                    <th class="py-2 px-2 text-center">Maç Puanı</th>
+                    <th class="py-2 px-2 text-right">$\Delta Elo$</th>
+                    <th class="py-2 px-3 text-right">Yeni Değer</th>
+                    <th class="py-2 px-3 text-right">Maç $\Delta V$</th>
+                  </tr>
+                </thead>
+                <tbody id="pp-history-tbody" class="divide-y divide-slate-800/50 mono-num"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800/80 py-4 px-6 text-center text-xs">
+    QuantFoot • Maç Bazlı Dinamik Oyuncu Piyasa Değeri ve Kulüp Elo Derecelendirme Sistemi • 20 Avrupa Ligi, Şampiyonlar Ligi ve Milli Maçlar
+  </footer>
+
+  <!-- ===================================================================== -->
+  <!-- QUANTFOOT ÇEKİRDEK HESAPLAMA MOTORU VE GÜNCEL 2026/27 VERİ TABANI     -->
+  <!-- ===================================================================== -->
+  <script>
+    const REF_DATE = new Date('2026-11-15T00:00:00Z');
+
+    const POS_PARAMS = {
+      FW: { label: 'Santrfor (FW)',     peakAge: 25.5, theta: 0.72, alpha: 0.20, baseMult: 1.06 },
+      W:  { label: 'Kanat (W)',         peakAge: 25.2, theta: 0.72, alpha: 0.20, baseMult: 1.05 },
+      AM: { label: 'Ofansif OS (AM)',   peakAge: 25.8, theta: 0.71, alpha: 0.20, baseMult: 1.02 },
+      CM: { label: 'Merkez OS (CM)',    peakAge: 26.2, theta: 0.69, alpha: 0.22, baseMult: 0.95 },
+      DM: { label: 'Ön Libero (DM)',    peakAge: 26.8, theta: 0.68, alpha: 0.25, baseMult: 0.90 },
+      FB: { label: 'Bek / Kanat Bek',   peakAge: 26.0, theta: 0.67, alpha: 0.25, baseMult: 0.86 },
+      CB: { label: 'Stoper (CB)',       peakAge: 27.2, theta: 0.67, alpha: 0.28, baseMult: 0.85 },
+      GK: { label: 'Kaleci (GK)',       peakAge: 28.8, theta: 0.62, alpha: 0.30, baseMult: 0.66 }
+    };
+
+    // 20 Avrupa Ulusal Ligi + UEFA Kupaları + Milli Maçlar
+    // Sıradan lig maçlarının etki tavanı düşük (±%0.18 - ±%0.22), UCL maçlarının tavanı yüksek (±%1.10 - ±%1.60)
+    const TOURNAMENTS = {
+      NAT_WC_EURO: { code: 'NAT_WC_EURO', name: '🌍 Dünya Kupası & EURO (Milli Maç)', type: 'NAT', tier: 0, baseElo: 1820, wComp: 1.50, lComp: 1.15, maxMvClip: 0.0130 },
+      NAT_UNL:     { code: 'NAT_UNL',     name: '🏳️ UEFA Uluslar Ligi (Milli Maç)',   type: 'NAT', tier: 0, baseElo: 1750, wComp: 0.95, lComp: 1.05, maxMvClip: 0.0075 },
+      UCL_KO:      { code: 'UCL_KO',      name: '🏆 Şampiyonlar Ligi (Eleme/Final)',  type: 'UCL', tier: 0, baseElo: 1850, wComp: 1.65, lComp: 1.15, maxMvClip: 0.0160 },
+      UCL_LP:      { code: 'UCL_LP',      name: '⭐ Şampiyonlar Ligi (Lig Aşaması)',  type: 'UCL', tier: 0, baseElo: 1800, wComp: 1.25, lComp: 1.12, maxMvClip: 0.0110 },
+      UEL:         { code: 'UEL',         name: '🔶 UEFA Avrupa Ligi',                type: 'UCL', tier: 0, baseElo: 1680, wComp: 0.85, lComp: 0.98, maxMvClip: 0.0065 },
+      UECL:        { code: 'UECL',        name: '🟢 UEFA Konferans Ligi',             type: 'UCL', tier: 0, baseElo: 1580, wComp: 0.60, lComp: 0.88, maxMvClip: 0.0045 },
+      ENG1:        { code: 'ENG1',        name: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League (İngiltere)',      type: 'DOMESTIC', tier: 1, baseElo: 1750, wComp: 0.28, lComp: 1.05, maxMvClip: 0.0022 },
+      ITA1:        { code: 'ITA1',        name: '🇮🇹 Serie A (İtalya)',                type: 'DOMESTIC', tier: 1, baseElo: 1750, wComp: 0.26, lComp: 1.00, maxMvClip: 0.0020 },
+      ESP1:        { code: 'ESP1',        name: '🇪🇸 LaLiga (İspanya)',                type: 'DOMESTIC', tier: 1, baseElo: 1750, wComp: 0.26, lComp: 1.02, maxMvClip: 0.0020 },
+      GER1:        { code: 'GER1',        name: '🇩🇪 Bundesliga (Almanya)',            type: 'DOMESTIC', tier: 1, baseElo: 1750, wComp: 0.26, lComp: 1.00, maxMvClip: 0.0020 },
+      FRA1:        { code: 'FRA1',        name: '🇫🇷 Ligue 1 (Fransa)',                type: 'DOMESTIC', tier: 1, baseElo: 1720, wComp: 0.24, lComp: 0.94, maxMvClip: 0.0018 },
+      POR1:        { code: 'POR1',        name: '🇵🇹 Liga Portugal (Portekiz)',        type: 'DOMESTIC', tier: 2, baseElo: 1620, wComp: 0.22, lComp: 0.86, maxMvClip: 0.0016 },
+      BEL1:        { code: 'BEL1',        name: '🇧🇪 Pro League (Belçika)',            type: 'DOMESTIC', tier: 2, baseElo: 1620, wComp: 0.20, lComp: 0.82, maxMvClip: 0.0015 },
+      NED1:        { code: 'NED1',        name: '🇳🇱 Eredivisie (Hollanda)',           type: 'DOMESTIC', tier: 2, baseElo: 1620, wComp: 0.20, lComp: 0.84, maxMvClip: 0.0015 },
+      TUR1:        { code: 'TUR1',        name: '🇹🇷 Süper Lig (Türkiye)',             type: 'DOMESTIC', tier: 2, baseElo: 1600, wComp: 0.20, lComp: 0.80, maxMvClip: 0.0015 },
+      CZE1:        { code: 'CZE1',        name: '🇨🇿 Chance Liga (Çekya)',             type: 'DOMESTIC', tier: 2, baseElo: 1580, wComp: 0.18, lComp: 0.74, maxMvClip: 0.0014 },
+      GRE1:        { code: 'GRE1',        name: '🇬🇷 Super League (Yunanistan)',       type: 'DOMESTIC', tier: 3, baseElo: 1520, wComp: 0.16, lComp: 0.72, maxMvClip: 0.0012 },
+      NOR1:        { code: 'NOR1',        name: '🇳🇴 Eliteserien (Norveç)',            type: 'DOMESTIC', tier: 3, baseElo: 1520, wComp: 0.16, lComp: 0.70, maxMvClip: 0.0012 },
+      DEN1:        { code: 'DEN1',        name: '🇩🇰 Superliga (Danimarka)',           type: 'DOMESTIC', tier: 3, baseElo: 1520, wComp: 0.16, lComp: 0.70, maxMvClip: 0.0012 },
+      AUT1:        { code: 'AUT1',        name: '🇦🇹 Bundesliga (Avusturya)',          type: 'DOMESTIC', tier: 3, baseElo: 1520, wComp: 0.16, lComp: 0.70, maxMvClip: 0.0012 },
+      SCO1:        { code: 'SCO1',        name: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Premiership (İskoçya)',           type: 'DOMESTIC', tier: 3, baseElo: 1500, wComp: 0.15, lComp: 0.68, maxMvClip: 0.0012 },
+      CRO1:        { code: 'CRO1',        name: '🇭🇷 HNL (Hırvatistan)',               type: 'DOMESTIC', tier: 3, baseElo: 1480, wComp: 0.14, lComp: 0.65, maxMvClip: 0.0010 },
+      SUI1:        { code: 'SUI1',        name: '🇨🇭 Super League (İsviçre)',          type: 'DOMESTIC', tier: 3, baseElo: 1480, wComp: 0.14, lComp: 0.65, maxMvClip: 0.0010 },
+      POL1:        { code: 'POL1',        name: '🇵🇱 Ekstraklasa (Polonya)',           type: 'DOMESTIC', tier: 3, baseElo: 1470, wComp: 0.14, lComp: 0.64, maxMvClip: 0.0010 },
+      SWE1:        { code: 'SWE1',        name: '🇸🇪 Allsvenskan (İsveç)',             type: 'DOMESTIC', tier: 4, baseElo: 1450, wComp: 0.13, lComp: 0.62, maxMvClip: 0.0009 },
+      SRB1:        { code: 'SRB1',        name: '🇷🇸 SuperLiga (Sırbistan)',           type: 'DOMESTIC', tier: 4, baseElo: 1440, wComp: 0.13, lComp: 0.60, maxMvClip: 0.0009 }
+    };
+
+    // 20 Avrupa Ligi'nden 80 Gerçek Kulüp (2022-2026 5 Yıllık Elo Serisi ile)
+    const INITIAL_TEAMS = [
+      { id: 1,  name: 'Arsenal',             country: 'ENG', league: 'ENG1', uefa: 'UCL',  elo: 2045.0, lastDelta: 2.10,  histElo: [1845, 1915, 1988, 2024, 2045] },
+      { id: 2,  name: 'Bayern München',      country: 'GER', league: 'GER1', uefa: 'UCL',  elo: 2040.0, lastDelta: 6.15,  histElo: [1995, 1962, 1955, 2018, 2040] },
+      { id: 3,  name: 'FC Barcelona',        country: 'ESP', league: 'ESP1', uefa: 'UCL',  elo: 2026.0, lastDelta: 5.90,  histElo: [1852, 1895, 1912, 1985, 2026] },
+      { id: 4,  name: 'Manchester City',     country: 'ENG', league: 'ENG1', uefa: 'UCL',  elo: 1999.0, lastDelta: 3.15,  histElo: [2038, 2065, 2042, 2015, 1999] },
+      { id: 5,  name: 'Real Madrid',         country: 'ESP', league: 'ESP1', uefa: 'UCL',  elo: 1998.0, lastDelta: 3.40,  histElo: [1972, 1965, 2012, 2010, 1998] },
+      { id: 6,  name: 'Paris Saint-Germain', country: 'FRA', league: 'FRA1', uefa: 'UCL',  elo: 1985.0, lastDelta: 4.80,  histElo: [1910, 1895, 1932, 1968, 1985] },
+      { id: 16, name: 'Internazionale',      country: 'ITA', league: 'ITA1', uefa: 'UCL',  elo: 1944.0, lastDelta: 5.40,  histElo: [1885, 1922, 1965, 1942, 1944] },
+      { id: 7,  name: 'Liverpool',           country: 'ENG', league: 'ENG1', uefa: 'UCL',  elo: 1938.0, lastDelta: -4.20, histElo: [2010, 1918, 1945, 1952, 1938] },
+      { id: 11, name: 'Brighton',            country: 'ENG', league: 'ENG1', uefa: 'UEL',  elo: 1910.0, lastDelta: 4.72,  histElo: [1760, 1842, 1830, 1878, 1910] },
+      { id: 15, name: 'Atlético Madrid',     country: 'ESP', league: 'ESP1', uefa: 'UCL',  elo: 1910.0, lastDelta: -3.63, histElo: [1865, 1882, 1875, 1905, 1910] },
+      { id: 43, name: 'Aston Villa',         country: 'ENG', league: 'ENG1', uefa: 'UCL',  elo: 1901.0, lastDelta: -2.90, histElo: [1735, 1810, 1865, 1890, 1901] },
+      { id: 13, name: 'Borussia Dortmund',   country: 'GER', league: 'GER1', uefa: 'UCL',  elo: 1899.0, lastDelta: 3.85,  histElo: [1835, 1868, 1885, 1892, 1899] },
+      { id: 12, name: 'Chelsea',             country: 'ENG', league: 'ENG1', uefa: 'UCL',  elo: 1885.0, lastDelta: 1.40,  histElo: [1935, 1795, 1835, 1890, 1885] },
+      { id: 22, name: 'SL Benfica',          country: 'POR', league: 'POR1', uefa: 'UCL',  elo: 1870.0, lastDelta: 1.35,  histElo: [1825, 1878, 1842, 1860, 1870] },
+      { id: 17, name: 'AS Roma',             country: 'ITA', league: 'ITA1', uefa: 'UEL',  elo: 1865.0, lastDelta: 0.47,  histElo: [1792, 1815, 1828, 1848, 1865] },
+      { id: 23, name: 'Sporting CP',         country: 'POR', league: 'POR1', uefa: 'UCL',  elo: 1863.0, lastDelta: 2.10,  histElo: [1795, 1810, 1858, 1872, 1863] },
+      { id: 69, name: 'Newcastle United',    country: 'ENG', league: 'ENG1', uefa: 'UCL',  elo: 1862.0, lastDelta: 1.80,  histElo: [1740, 1845, 1835, 1850, 1862] },
+      { id: 14, name: 'Bayer Leverkusen',    country: 'GER', league: 'GER1', uefa: 'UCL',  elo: 1859.0, lastDelta: 2.55,  histElo: [1775, 1832, 1948, 1885, 1859] },
+      { id: 70, name: 'Tottenham Hotspur',   country: 'ENG', league: 'ENG1', uefa: 'UEL',  elo: 1848.0, lastDelta: 1.15,  histElo: [1855, 1810, 1835, 1842, 1848] },
+      { id: 71, name: 'Athletic Bilbao',     country: 'ESP', league: 'ESP1', uefa: 'UEL',  elo: 1845.0, lastDelta: 1.60,  histElo: [1765, 1780, 1825, 1838, 1845] },
+      { id: 24, name: 'FC Porto',            country: 'POR', league: 'POR1', uefa: 'UCL',  elo: 1843.0, lastDelta: 5.80,  histElo: [1848, 1835, 1822, 1835, 1843] },
+      { id: 25, name: 'Club Brugge',         country: 'BEL', league: 'BEL1', uefa: 'UCL',  elo: 1839.0, lastDelta: 4.25,  histElo: [1735, 1720, 1775, 1818, 1839] },
+      { id: 72, name: 'Manchester United',   country: 'ENG', league: 'ENG1', uefa: 'UCL',  elo: 1835.0, lastDelta: 2.40,  histElo: [1845, 1865, 1810, 1825, 1835] },
+      { id: 28, name: 'RB Leipzig',          country: 'GER', league: 'GER1', uefa: 'UCL',  elo: 1832.0, lastDelta: -3.15, histElo: [1840, 1855, 1848, 1838, 1832] },
+      { id: 18, name: 'Juventus',            country: 'ITA', league: 'ITA1', uefa: 'UCL',  elo: 1830.0, lastDelta: 1.20,  histElo: [1835, 1820, 1815, 1838, 1830] },
+      { id: 48, name: 'Real Betis',          country: 'ESP', league: 'ESP1', uefa: 'UCL',  elo: 1829.0, lastDelta: -3.85, histElo: [1780, 1792, 1785, 1810, 1829] },
+      { id: 73, name: 'Union St-Gilloise',   country: 'BEL', league: 'BEL1', uefa: 'UEL',  elo: 1826.0, lastDelta: 2.68,  histElo: [1710, 1775, 1805, 1818, 1826] },
+      { id: 8,  name: 'Galatasaray',         country: 'TUR', league: 'TUR1', uefa: 'UCL',  elo: 1824.0, lastDelta: 6.40,  histElo: [1615, 1725, 1782, 1810, 1824] },
+      { id: 19, name: 'AC Milan',            country: 'ITA', league: 'ITA1', uefa: 'UCL',  elo: 1820.0, lastDelta: 4.57,  histElo: [1855, 1838, 1830, 1812, 1820] },
+      { id: 20, name: 'Napoli',              country: 'ITA', league: 'ITA1', uefa: 'UCL',  elo: 1818.0, lastDelta: -5.80, histElo: [1840, 1915, 1795, 1825, 1818] },
+      { id: 51, name: 'VfB Stuttgart',       country: 'GER', league: 'GER1', uefa: 'UCL',  elo: 1815.0, lastDelta: -6.40, histElo: [1645, 1680, 1825, 1820, 1815] },
+      { id: 53, name: 'Lazio',               country: 'ITA', league: 'ITA1', uefa: 'UEL',  elo: 1808.0, lastDelta: 1.10,  histElo: [1775, 1812, 1790, 1802, 1808] },
+      { id: 44, name: 'Nottingham Forest',   country: 'ENG', league: 'ENG1', uefa: 'UEL',  elo: 1801.0, lastDelta: 1.20,  histElo: [1610, 1690, 1730, 1775, 1801] },
+      { id: 45, name: 'Fulham',              country: 'ENG', league: 'ENG1', uefa: 'UECL', elo: 1800.0, lastDelta: 0.85,  histElo: [1685, 1745, 1768, 1788, 1800] },
+      { id: 54, name: 'Atalanta',            country: 'ITA', league: 'ITA1', uefa: 'UCL',  elo: 1796.0, lastDelta: 4.12,  histElo: [1785, 1795, 1845, 1810, 1796] },
+      { id: 49, name: 'Real Sociedad',       country: 'ESP', league: 'ESP1', uefa: 'UEL',  elo: 1795.0, lastDelta: 0.40,  histElo: [1785, 1825, 1818, 1802, 1795] },
+      { id: 21, name: 'AS Monaco',           country: 'FRA', league: 'FRA1', uefa: 'UCL',  elo: 1790.0, lastDelta: 1.50,  histElo: [1755, 1742, 1780, 1798, 1790] },
+      { id: 50, name: 'Villarreal',          country: 'ESP', league: 'ESP1', uefa: 'UCL',  elo: 1788.0, lastDelta: -4.80, histElo: [1835, 1795, 1775, 1792, 1788] },
+      { id: 57, name: 'Olympique Lyon',      country: 'FRA', league: 'FRA1', uefa: 'UEL',  elo: 1784.0, lastDelta: 1.40,  histElo: [1760, 1745, 1755, 1775, 1784] },
+      { id: 58, name: 'LOSC Lille',          country: 'FRA', league: 'FRA1', uefa: 'UCL',  elo: 1780.0, lastDelta: 0.00,  histElo: [1755, 1770, 1788, 1785, 1780] },
+      { id: 59, name: 'Olympique Marseille', country: 'FRA', league: 'FRA1', uefa: 'UEL',  elo: 1780.0, lastDelta: 0.60,  histElo: [1765, 1785, 1760, 1775, 1780] },
+      { id: 26, name: 'PSV Eindhoven',       country: 'NED', league: 'NED1', uefa: 'UCL',  elo: 1779.0, lastDelta: -4.25, histElo: [1725, 1765, 1815, 1792, 1779] },
+      { id: 9,  name: 'Fenerbahçe',          country: 'TUR', league: 'TUR1', uefa: 'UCL',  elo: 1779.0, lastDelta: 6.36,  histElo: [1640, 1718, 1765, 1772, 1779] },
+      { id: 32, name: 'Bodø/Glimt',          country: 'NOR', league: 'NOR1', uefa: 'UCL',  elo: 1779.0, lastDelta: 0.80,  histElo: [1645, 1680, 1720, 1755, 1779] },
+      { id: 60, name: 'RC Lens',             country: 'FRA', league: 'FRA1', uefa: 'UCL',  elo: 1779.0, lastDelta: -1.80, histElo: [1715, 1815, 1785, 1782, 1779] },
+      { id: 55, name: 'Bologna',             country: 'ITA', league: 'ITA1', uefa: 'UCL',  elo: 1775.0, lastDelta: 0.90,  histElo: [1650, 1710, 1785, 1770, 1775] },
+      { id: 46, name: 'West Ham United',     country: 'ENG', league: 'ENG1', uefa: 'UECL', elo: 1748.0, lastDelta: -1.10, histElo: [1795, 1770, 1765, 1758, 1748] },
+      { id: 33, name: 'Olympiakos',          country: 'GRE', league: 'GRE1', uefa: 'UEL',  elo: 1747.0, lastDelta: 1.15,  histElo: [1685, 1660, 1715, 1735, 1747] },
+      { id: 29, name: 'Slavia Praha',        country: 'CZE', league: 'CZE1', uefa: 'UCL',  elo: 1746.0, lastDelta: -2.10, histElo: [1695, 1705, 1725, 1738, 1746] },
+      { id: 74, name: 'SC Braga',            country: 'POR', league: 'POR1', uefa: 'UEL',  elo: 1745.0, lastDelta: 0.90,  histElo: [1730, 1748, 1740, 1742, 1745] },
+      { id: 52, name: 'Eintracht Frankfurt', country: 'GER', league: 'GER1', uefa: 'UEL',  elo: 1738.0, lastDelta: 0.30,  histElo: [1745, 1760, 1735, 1742, 1738] },
+      { id: 75, name: 'KRC Genk',            country: 'BEL', league: 'BEL1', uefa: 'UEL',  elo: 1735.0, lastDelta: 1.10,  histElo: [1685, 1715, 1710, 1725, 1735] },
+      { id: 30, name: 'Feyenoord',           country: 'NED', league: 'NED1', uefa: 'UCL',  elo: 1725.0, lastDelta: -5.40, histElo: [1680, 1755, 1780, 1742, 1725] },
+      { id: 56, name: 'Fiorentina',          country: 'ITA', league: 'ITA1', uefa: 'UECL', elo: 1717.0, lastDelta: 0.20,  histElo: [1710, 1735, 1730, 1722, 1717] },
+      { id: 47, name: 'Wolverhampton',       country: 'ENG', league: 'ENG1', uefa: 'UECL', elo: 1716.0, lastDelta: -0.45, histElo: [1740, 1715, 1728, 1720, 1716] },
+      { id: 27, name: 'Ajax',                country: 'NED', league: 'NED1', uefa: 'UEL',  elo: 1715.0, lastDelta: 1.25,  histElo: [1845, 1730, 1665, 1702, 1715] },
+      { id: 76, name: 'Viking FK',           country: 'NOR', league: 'NOR1', uefa: 'UCL',  elo: 1715.0, lastDelta: 3.10,  histElo: [1580, 1620, 1665, 1695, 1715] },
+      { id: 10, name: 'Beşiktaş',            country: 'TUR', league: 'TUR1', uefa: 'UEL',  elo: 1705.0, lastDelta: 3.32,  histElo: [1625, 1668, 1640, 1685, 1705] },
+      { id: 77, name: 'FC Midtjylland',      country: 'DEN', league: 'DEN1', uefa: 'UEL',  elo: 1705.0, lastDelta: 0.85,  histElo: [1655, 1660, 1685, 1698, 1705] },
+      { id: 63, name: 'Trabzonspor',         country: 'TUR', league: 'TUR1', uefa: 'UEL',  elo: 1700.0, lastDelta: 1.90,  histElo: [1695, 1665, 1675, 1690, 1700] },
+      { id: 78, name: 'AEK Athens',          country: 'GRE', league: 'GRE1', uefa: 'UCL',  elo: 1695.0, lastDelta: -1.80, histElo: [1610, 1675, 1685, 1690, 1695] },
+      { id: 34, name: 'FC København',        country: 'DEN', league: 'DEN1', uefa: 'UECL', elo: 1694.0, lastDelta: 0.65,  histElo: [1630, 1675, 1705, 1688, 1694] },
+      { id: 79, name: 'Crvena Zvezda',       country: 'SRB', league: 'SRB1', uefa: 'UCL',  elo: 1685.0, lastDelta: 1.10,  histElo: [1660, 1670, 1675, 1680, 1685] },
+      { id: 61, name: 'AZ Alkmaar',          country: 'NED', league: 'NED1', uefa: 'UEL',  elo: 1681.0, lastDelta: 0.50,  histElo: [1660, 1695, 1688, 1678, 1681] },
+      { id: 80, name: 'Panathinaikos',       country: 'GRE', league: 'GRE1', uefa: 'UECL', elo: 1679.0, lastDelta: 0.40,  histElo: [1590, 1645, 1665, 1672, 1679] },
+      { id: 62, name: 'Anderlecht',          country: 'BEL', league: 'BEL1', uefa: 'UEL',  elo: 1662.0, lastDelta: 0.35,  histElo: [1620, 1615, 1650, 1658, 1662] },
+      { id: 35, name: 'RB Salzburg',         country: 'AUT', league: 'AUT1', uefa: 'UCL',  elo: 1660.0, lastDelta: -1.10, histElo: [1755, 1730, 1695, 1675, 1660] },
+      { id: 36, name: 'PAOK',                country: 'GRE', league: 'GRE1', uefa: 'UEL',  elo: 1658.0, lastDelta: 0.60,  histElo: [1595, 1615, 1650, 1662, 1658] },
+      { id: 37, name: 'Celtic',              country: 'SCO', league: 'SCO1', uefa: 'UCL',  elo: 1657.0, lastDelta: 0.90,  histElo: [1610, 1635, 1642, 1650, 1657] },
+      { id: 38, name: 'Dinamo Zagreb',       country: 'CRO', league: 'CRO1', uefa: 'UCL',  elo: 1655.0, lastDelta: 0.45,  histElo: [1665, 1650, 1640, 1652, 1655] },
+      { id: 81, name: 'BSC Young Boys',      country: 'SUI', league: 'SUI1', uefa: 'UCL',  elo: 1645.0, lastDelta: 0.30,  histElo: [1640, 1665, 1660, 1650, 1645] },
+      { id: 31, name: 'Sparta Praha',        country: 'CZE', league: 'CZE1', uefa: 'UCL',  elo: 1644.0, lastDelta: 0.40,  histElo: [1565, 1610, 1655, 1648, 1644] },
+      { id: 82, name: 'LASK',                country: 'AUT', league: 'AUT1', uefa: 'UCL',  elo: 1643.0, lastDelta: 3.20,  histElo: [1610, 1625, 1635, 1638, 1643] },
+      { id: 64, name: 'Başakşehir',          country: 'TUR', league: 'TUR1', uefa: 'UECL', elo: 1642.0, lastDelta: 0.40,  histElo: [1635, 1655, 1630, 1638, 1642] },
+      { id: 83, name: 'Rangers FC',          country: 'SCO', league: 'SCO1', uefa: 'UEL',  elo: 1642.0, lastDelta: 0.55,  histElo: [1660, 1650, 1645, 1640, 1642] },
+      { id: 84, name: 'Lech Poznań',         country: 'POL', league: 'POL1', uefa: 'UECL', elo: 1635.0, lastDelta: 0.75,  histElo: [1585, 1620, 1615, 1628, 1635] },
+      { id: 85, name: 'Malmö FF',            country: 'SWE', league: 'SWE1', uefa: 'UEL',  elo: 1635.0, lastDelta: 0.60,  histElo: [1605, 1595, 1620, 1630, 1635] },
+      { id: 39, name: 'Sturm Graz',          country: 'AUT', league: 'AUT1', uefa: 'UCL',  elo: 1631.0, lastDelta: 0.25,  histElo: [1545, 1585, 1615, 1625, 1631] },
+      { id: 65, name: 'Göztepe',             country: 'TUR', league: 'TUR1', uefa: 'UECL', elo: 1618.0, lastDelta: 2.15,  histElo: [1510, 1525, 1565, 1598, 1618] },
+      { id: 67, name: 'Samsunspor',          country: 'TUR', league: 'TUR1', uefa: 'UECL', elo: 1571.0, lastDelta: 1.80,  histElo: [1450, 1540, 1555, 1565, 1571] }
+    ];
+
+    // Tamamı Gerçek İsimli ve Güncel 2026/27 Kadrolarındaki 75 Yıldız Futbolcu
+    // (Rodri -> FC Barcelona, Orkun Kökçü / Vlahović / Trossard -> Beşiktaş, Greenwood / Asensio / Škriniar -> Fenerbahçe, Osimhen / Sané / Gündoğan -> Galatasaray, Salah / Onuachu -> Trabzonspor, Wirtz / Isak -> Liverpool)
+    const INITIAL_PLAYERS = [
+      { id: 101, name: 'Lamine Yamal',         nat: 'İspanya',    foot: 'Sol',     teamId: 3,  pos: 'W',  birth: '2007-07-13', contract: '2030-06-30', baseElo: 1962, avgRating: 7.93, histMvM: [5, 25, 120, 180, 218] },
+      { id: 102, name: 'Erling Haaland',       nat: 'Norveç',     foot: 'Sol',     teamId: 4,  pos: 'FW', birth: '2000-07-21', contract: '2034-06-30', baseElo: 1990, avgRating: 7.97, histMvM: [150, 180, 180, 200, 216] },
+      { id: 103, name: 'Kylian Mbappé',        nat: 'Fransa',     foot: 'Sağ',     teamId: 5,  pos: 'FW', birth: '1998-12-20', contract: '2029-06-30', baseElo: 1986, avgRating: 7.96, histMvM: [160, 180, 180, 190, 198] },
+      { id: 104, name: 'Vinícius Júnior',      nat: 'Brezilya',   foot: 'Sağ',     teamId: 5,  pos: 'W',  birth: '2000-07-12', contract: '2029-06-30', baseElo: 1968, avgRating: 7.68, histMvM: [100, 150, 200, 195, 188] },
+      { id: 118, name: 'Michael Olise',        nat: 'Fransa',     foot: 'Sol',     teamId: 2,  pos: 'W',  birth: '2001-12-12', contract: '2029-06-30', baseElo: 1962, avgRating: 7.87, histMvM: [22, 38, 65, 130, 176] },
+      { id: 105, name: 'Jude Bellingham',      nat: 'İngiltere',  foot: 'Sağ',     teamId: 5,  pos: 'AM', birth: '2003-06-29', contract: '2029-06-30', baseElo: 1952, avgRating: 7.82, histMvM: [80, 120, 180, 170, 162] },
+      { id: 106, name: 'Bukayo Saka',          nat: 'İngiltere',  foot: 'Sol',     teamId: 1,  pos: 'W',  birth: '2001-09-05', contract: '2031-06-30', baseElo: 1950, avgRating: 7.84, histMvM: [65, 110, 140, 150, 154] },
+      { id: 119, name: 'Florian Wirtz',        nat: 'Almanya',    foot: 'Sağ',     teamId: 7,  pos: 'AM', birth: '2003-05-03', contract: '2030-06-30', baseElo: 1944, avgRating: 7.79, histMvM: [70, 85, 130, 140, 148] },
+      { id: 120, name: 'Jamal Musiala',        nat: 'Almanya',    foot: 'Sağ',     teamId: 2,  pos: 'AM', birth: '2003-02-26', contract: '2029-06-30', baseElo: 1942, avgRating: 7.76, histMvM: [65, 110, 130, 140, 145] },
+      { id: 212, name: 'Federico Valverde',    nat: 'Uruguay',    foot: 'Sağ',     teamId: 5,  pos: 'CM', birth: '1998-07-22', contract: '2029-06-30', baseElo: 1948, avgRating: 7.72, histMvM: [70, 100, 120, 130, 134] },
+      { id: 107, name: 'Pedri',                nat: 'İspanya',    foot: 'Sağ',     teamId: 3,  pos: 'CM', birth: '2002-11-25', contract: '2030-06-30', baseElo: 1935, avgRating: 7.68, histMvM: [80, 100, 90, 115, 132] },
+      { id: 121, name: 'Cole Palmer',          nat: 'İngiltere',  foot: 'Sol',     teamId: 12, pos: 'AM', birth: '2002-05-06', contract: '2031-06-30', baseElo: 1925, avgRating: 7.74, histMvM: [6, 18, 80, 115, 126] },
+      { id: 136, name: 'João Neves',           nat: 'Portekiz',   foot: 'Sağ',     teamId: 6,  pos: 'CM', birth: '2004-09-27', contract: '2029-06-30', baseElo: 1928, avgRating: 7.75, histMvM: [1, 10, 55, 95, 118] },
+      { id: 213, name: 'Martin Ødegaard',      nat: 'Norveç',     foot: 'Sol',     teamId: 1,  pos: 'AM', birth: '1998-12-17', contract: '2028-06-30', baseElo: 1940, avgRating: 7.76, histMvM: [45, 80, 110, 115, 114] },
+      { id: 108, name: 'Declan Rice',          nat: 'İngiltere',  foot: 'Sağ',     teamId: 1,  pos: 'DM', birth: '1999-01-14', contract: '2029-06-30', baseElo: 1932, avgRating: 7.58, histMvM: [75, 90, 120, 118, 112] },
+      { id: 214, name: 'Alexander Isak',       nat: 'İsveç',      foot: 'Sağ',     teamId: 7,  pos: 'FW', birth: '1999-09-21', contract: '2029-06-30', baseElo: 1922, avgRating: 7.65, histMvM: [40, 70, 75, 90, 102] },
+      { id: 109, name: 'William Saliba',       nat: 'Fransa',     foot: 'Sağ',     teamId: 1,  pos: 'CB', birth: '2001-03-24', contract: '2029-06-30', baseElo: 1930, avgRating: 7.52, histMvM: [30, 65, 80, 90, 98] },
+      { id: 111, name: 'Rodri',                nat: 'İspanya',    foot: 'Sağ',     teamId: 3,  pos: 'DM', birth: '1996-06-22', contract: '2030-06-30', baseElo: 1954, avgRating: 7.82, histMvM: [80, 100, 130, 110, 96] },
+      { id: 122, name: 'Lautaro Martínez',     nat: 'Arjantin',   foot: 'Sağ',     teamId: 16, pos: 'FW', birth: '1997-08-22', contract: '2029-06-30', baseElo: 1922, avgRating: 7.64, histMvM: [75, 85, 110, 100, 92] },
+      { id: 137, name: 'Pau Cubarsí',          nat: 'İspanya',    foot: 'Sağ',     teamId: 3,  pos: 'CB', birth: '2007-01-22', contract: '2029-06-30', baseElo: 1895, avgRating: 7.46, histMvM: [0.5, 1.5, 40, 75, 92] },
+      { id: 218, name: 'Julián Alvarez',       nat: 'Arjantin',   foot: 'Sağ',     teamId: 15, pos: 'FW', birth: '2000-01-31', contract: '2030-06-30', baseElo: 1915, avgRating: 7.58, histMvM: [23, 60, 90, 90, 92] },
+      { id: 215, name: 'Khvicha Kvaratskhelia',nat: 'Gürcistan',  foot: 'Her İki', teamId: 6,  pos: 'W',  birth: '2001-02-12', contract: '2029-06-30', baseElo: 1918, avgRating: 7.68, histMvM: [15, 85, 80, 85, 90] },
+      { id: 139, name: 'Dominik Szoboszlai',   nat: 'Macaristan', foot: 'Sağ',     teamId: 7,  pos: 'AM', birth: '2000-10-25', contract: '2028-06-30', baseElo: 1906, avgRating: 7.54, histMvM: [28, 40, 75, 80, 86] },
+      { id: 141, name: 'Vitinha',              nat: 'Portekiz',   foot: 'Sağ',     teamId: 6,  pos: 'CM', birth: '2000-02-13', contract: '2029-06-30', baseElo: 1920, avgRating: 7.66, histMvM: [24, 42, 55, 75, 85] },
+      { id: 138, name: 'Alessandro Bastoni',   nat: 'İtalya',     foot: 'Sol',     teamId: 16, pos: 'CB', birth: '1999-04-13', contract: '2028-06-30', baseElo: 1924, avgRating: 7.58, histMvM: [60, 60, 70, 80, 84] },
+      { id: 217, name: 'Joško Gvardiol',       nat: 'Hırvatistan',foot: 'Sol',     teamId: 4,  pos: 'CB', birth: '2002-01-23', contract: '2028-06-30', baseElo: 1908, avgRating: 7.48, histMvM: [35, 75, 75, 80, 84] },
+      { id: 140, name: 'Ousmane Dembélé',      nat: 'Fransa',     foot: 'Her İki', teamId: 6,  pos: 'W',  birth: '1997-05-15', contract: '2028-06-30', baseElo: 1938, avgRating: 7.88, histMvM: [30, 60, 60, 75, 82] },
+      { id: 216, name: 'Raphinha',             nat: 'Brezilya',   foot: 'Sol',     teamId: 3,  pos: 'W',  birth: '1996-12-14', contract: '2028-06-30', baseElo: 1932, avgRating: 7.85, histMvM: [45, 60, 50, 75, 82] },
+      { id: 142, name: 'Bradley Barcola',      nat: 'Fransa',     foot: 'Sağ',     teamId: 6,  pos: 'W',  birth: '2002-09-02', contract: '2028-06-30', baseElo: 1892, avgRating: 7.55, histMvM: [2, 18, 50, 70, 78] },
+      { id: 110, name: 'Harry Kane',           nat: 'İngiltere',  foot: 'Sağ',     teamId: 2,  pos: 'FW', birth: '1993-07-28', contract: '2027-06-30', baseElo: 2004, avgRating: 7.84, histMvM: [100, 90, 100, 85, 76] },
+      { id: 112, name: 'Victor Osimhen',       nat: 'Nijerya',    foot: 'Sağ',     teamId: 8,  pos: 'FW', birth: '1998-12-29', contract: '2029-06-30', baseElo: 1898, avgRating: 7.62, histMvM: [65, 120, 100, 75, 75] },
+      { id: 123, name: 'Viktor Gyökeres',      nat: 'İsveç',      foot: 'Sağ',     teamId: 23, pos: 'FW', birth: '1998-06-04', contract: '2028-06-30', baseElo: 1888, avgRating: 7.80, histMvM: [5, 13, 65, 75, 71] },
+      { id: 113, name: 'Arda Güler',           nat: 'Türkiye',    foot: 'Sol',     teamId: 5,  pos: 'AM', birth: '2005-02-25', contract: '2029-06-30', baseElo: 1862, avgRating: 7.64, histMvM: [6, 15, 45, 58, 68] },
+      { id: 124, name: 'Achraf Hakimi',        nat: 'Fas',        foot: 'Sağ',     teamId: 6,  pos: 'FB', birth: '1998-11-04', contract: '2029-06-30', baseElo: 1902, avgRating: 7.56, histMvM: [65, 65, 60, 65, 64] },
+      { id: 129, name: 'Jérémy Doku',          nat: 'Belçika',    foot: 'Sağ',     teamId: 4,  pos: 'W',  birth: '2002-05-27', contract: '2029-06-30', baseElo: 1882, avgRating: 7.39, histMvM: [20, 28, 65, 62, 63] },
+      { id: 125, name: 'Kenan Yıldız',         nat: 'Türkiye',    foot: 'Her İki', teamId: 18, pos: 'W',  birth: '2005-05-04', contract: '2029-06-30', baseElo: 1852, avgRating: 7.52, histMvM: [1, 3, 40, 52, 60] },
+      { id: 219, name: 'Mason Greenwood',      nat: 'İngiltere',  foot: 'Her İki', teamId: 9,  pos: 'FW', birth: '2001-10-01', contract: '2029-06-30', baseElo: 1848, avgRating: 7.45, histMvM: [25, 15, 35, 50, 55] },
+      { id: 130, name: 'Yan Diomande',         nat: 'Fildişi',    foot: 'Sağ',     teamId: 28, pos: 'W',  birth: '2006-11-14', contract: '2030-06-30', baseElo: 1835, avgRating: 7.72, histMvM: [0.5, 2, 12, 32, 48] },
+      { id: 143, name: 'Ollie Watkins',        nat: 'İngiltere',  foot: 'Sağ',     teamId: 43, pos: 'FW', birth: '1995-12-30', contract: '2028-06-30', baseElo: 1885, avgRating: 7.42, histMvM: [35, 40, 65, 55, 48] },
+      { id: 220, name: 'Leroy Sané',           nat: 'Almanya',    foot: 'Sol',     teamId: 8,  pos: 'W',  birth: '1996-01-11', contract: '2028-06-30', baseElo: 1858, avgRating: 7.58, histMvM: [70, 65, 60, 45, 38] },
+      { id: 131, name: 'Manuel Locatelli',     nat: 'İtalya',     foot: 'Sağ',     teamId: 18, pos: 'DM', birth: '1998-01-08', contract: '2028-06-30', baseElo: 1855, avgRating: 7.72, histMvM: [35, 30, 28, 33, 36] },
+      { id: 221, name: 'Dušan Vlahović',       nat: 'Sırbistan',  foot: 'Sol',     teamId: 10, pos: 'FW', birth: '2000-01-28', contract: '2029-06-30', baseElo: 1832, avgRating: 7.40, histMvM: [80, 70, 60, 42, 35] },
+      { id: 126, name: 'Ferdi Kadıoğlu',       nat: 'Türkiye',    foot: 'Sağ',     teamId: 11, pos: 'FB', birth: '1999-10-07', contract: '2028-06-30', baseElo: 1825, avgRating: 7.36, histMvM: [10, 17, 30, 32, 34] },
+      { id: 114, name: 'Barış Alper Yılmaz',   nat: 'Türkiye',    foot: 'Sağ',     teamId: 8,  pos: 'W',  birth: '2000-05-23', contract: '2028-06-30', baseElo: 1805, avgRating: 7.42, histMvM: [2, 6, 20, 26, 30] },
+      { id: 127, name: 'Orkun Kökçü',          nat: 'Türkiye',    foot: 'Her İki', teamId: 10, pos: 'CM', birth: '2000-12-29', contract: '2029-06-30', baseElo: 1818, avgRating: 7.55, histMvM: [22, 30, 28, 30, 30] },
+      { id: 128, name: 'Hakan Çalhanoğlu',     nat: 'Türkiye',    foot: 'Sağ',     teamId: 16, pos: 'DM', birth: '1994-02-08', contract: '2027-06-30', baseElo: 1908, avgRating: 7.55, histMvM: [35, 40, 45, 35, 27] },
+      { id: 208, name: 'Gabriel Sara',         nat: 'Brezilya',   foot: 'Sol',     teamId: 8,  pos: 'CM', birth: '1999-06-26', contract: '2029-06-30', baseElo: 1815, avgRating: 7.58, histMvM: [6, 12, 18, 23, 26] },
+      { id: 201, name: 'Kerem Aktürkoğlu',     nat: 'Türkiye',    foot: 'Sağ',     teamId: 22, pos: 'W',  birth: '1998-10-21', contract: '2029-06-30', baseElo: 1825, avgRating: 7.52, histMvM: [11, 15, 17, 22, 25] },
+      { id: 116, name: 'Thibaut Courtois',     nat: 'Belçika',    foot: 'Sol',     teamId: 5,  pos: 'GK', birth: '1992-05-11', contract: '2027-06-30', baseElo: 1922, avgRating: 7.48, histMvM: [60, 45, 28, 26, 25] },
+      { id: 117, name: 'Alisson Becker',       nat: 'Brezilya',   foot: 'Sağ',     teamId: 7,  pos: 'GK', birth: '1992-10-02', contract: '2027-06-30', baseElo: 1914, avgRating: 7.42, histMvM: [50, 35, 28, 25, 24] },
+      { id: 222, name: 'Mohamed Salah',        nat: 'Mısır',      foot: 'Sol',     teamId: 63, pos: 'W',  birth: '1992-06-15', contract: '2028-06-30', baseElo: 1885, avgRating: 7.48, histMvM: [90, 65, 55, 32, 22] },
+      { id: 209, name: 'Can Uzun',             nat: 'Türkiye',    foot: 'Sağ',     teamId: 52, pos: 'AM', birth: '2005-11-11', contract: '2029-06-30', baseElo: 1775, avgRating: 7.32, histMvM: [0.5, 2, 12, 16, 22] },
+      { id: 223, name: 'Leandro Trossard',     nat: 'Belçika',    foot: 'Sağ',     teamId: 10, pos: 'W',  birth: '1994-12-04', contract: '2028-06-30', baseElo: 1815, avgRating: 7.30, histMvM: [25, 35, 30, 24, 20] },
+      { id: 132, name: 'Davinson Sánchez',     nat: 'Kolombiya',  foot: 'Sağ',     teamId: 8,  pos: 'CB', birth: '1996-06-12', contract: '2027-06-30', baseElo: 1808, avgRating: 7.25, histMvM: [28, 15, 18, 19, 19] },
+      { id: 224, name: 'Marco Asensio',        nat: 'İspanya',    foot: 'Sol',     teamId: 9,  pos: 'AM', birth: '1996-01-21', contract: '2028-06-30', baseElo: 1815, avgRating: 7.46, histMvM: [40, 25, 20, 18, 18] },
+      { id: 207, name: 'Gedson Fernandes',     nat: 'Portekiz',   foot: 'Sağ',     teamId: 10, pos: 'CM', birth: '1999-01-09', contract: '2028-06-30', baseElo: 1782, avgRating: 7.34, histMvM: [8, 12, 16, 17, 18] },
+      { id: 115, name: 'Semih Kılıçsoy',       nat: 'Türkiye',    foot: 'Sağ',     teamId: 10, pos: 'FW', birth: '2005-08-15', contract: '2028-06-30', baseElo: 1742, avgRating: 7.20, histMvM: [0.5, 2, 12, 15, 18] },
+      { id: 146, name: 'Milan Škriniar',       nat: 'Slovakya',   foot: 'Sağ',     teamId: 9,  pos: 'CB', birth: '1995-02-11', contract: '2028-06-30', baseElo: 1815, avgRating: 7.22, histMvM: [65, 50, 30, 18, 15] },
+      { id: 225, name: 'İlkay Gündoğan',       nat: 'Almanya',    foot: 'Sağ',     teamId: 8,  pos: 'CM', birth: '1990-10-24', contract: '2027-06-30', baseElo: 1845, avgRating: 7.40, histMvM: [35, 20, 15, 14, 13] },
+      { id: 133, name: 'Fred',                 nat: 'Brezilya',   foot: 'Sol',     teamId: 9,  pos: 'CM', birth: '1993-03-05', contract: '2027-06-30', baseElo: 1790, avgRating: 7.29, histMvM: [20, 19, 17, 15, 13] },
+      { id: 145, name: 'Lucas Torreira',       nat: 'Uruguay',    foot: 'Sağ',     teamId: 8,  pos: 'DM', birth: '1996-02-11', contract: '2028-06-30', baseElo: 1818, avgRating: 7.34, histMvM: [20, 16, 15, 14, 13] },
+      { id: 204, name: 'İsmail Yüksek',        nat: 'Türkiye',    foot: 'Sağ',     teamId: 9,  pos: 'DM', birth: '1999-01-26', contract: '2028-06-30', baseElo: 1772, avgRating: 7.22, histMvM: [0.5, 4, 10, 12, 13] },
+      { id: 144, name: 'Mauro Icardi',         nat: 'Arjantin',   foot: 'Sağ',     teamId: 8,  pos: 'FW', birth: '1993-02-19', contract: '2027-06-30', baseElo: 1825, avgRating: 7.38, histMvM: [22, 19, 17, 14, 12] },
+      { id: 210, name: 'Deniz Gül',            nat: 'Türkiye',    foot: 'Sağ',     teamId: 24, pos: 'FW', birth: '2004-07-02', contract: '2029-06-30', baseElo: 1752, avgRating: 7.25, histMvM: [0.2, 0.8, 4.5, 8, 12] },
+      { id: 206, name: 'Rafa Silva',           nat: 'Portekiz',   foot: 'Sağ',     teamId: 10, pos: 'AM', birth: '1993-05-17', contract: '2027-06-30', baseElo: 1808, avgRating: 7.48, histMvM: [20, 22, 14, 12, 11] },
+      { id: 202, name: 'Uğurcan Çakır',        nat: 'Türkiye',    foot: 'Sağ',     teamId: 63, pos: 'GK', birth: '1996-04-05', contract: '2028-06-30', baseElo: 1775, avgRating: 7.36, histMvM: [18, 14, 10, 9, 9.5] },
+      { id: 147, name: 'Paul Onuachu',         nat: 'Nijerya',    foot: 'Sağ',     teamId: 63, pos: 'FW', birth: '1994-05-28', contract: '2027-06-30', baseElo: 1765, avgRating: 7.35, histMvM: [17, 13, 12, 10, 9] },
+      { id: 205, name: 'İrfan Can Kahveci',    nat: 'Türkiye',    foot: 'Sol',     teamId: 9,  pos: 'W',  birth: '1995-07-15', contract: '2028-06-30', baseElo: 1780, avgRating: 7.31, histMvM: [9, 7, 10, 10, 9] },
+      { id: 203, name: 'Abdülkerim Bardakcı',  nat: 'Türkiye',    foot: 'Sol',     teamId: 8,  pos: 'CB', birth: '1994-09-07', contract: '2027-06-30', baseElo: 1782, avgRating: 7.28, histMvM: [3, 6, 9, 8.5, 8] },
+      { id: 148, name: 'Eldor Shomurodov',     nat: 'Özbekistan', foot: 'Sağ',     teamId: 64, pos: 'FW', birth: '1995-06-29', contract: '2027-06-30', baseElo: 1748, avgRating: 7.30, histMvM: [12, 7, 5, 6, 7] },
+      { id: 135, name: 'Patrick Berg',         nat: 'Norveç',     foot: 'Sağ',     teamId: 32, pos: 'DM', birth: '1997-11-24', contract: '2028-06-30', baseElo: 1758, avgRating: 7.45, histMvM: [4, 4.5, 5, 6, 7] },
+      { id: 134, name: 'Ayoub El Kaabi',       nat: 'Fas',        foot: 'Sol',     teamId: 33, pos: 'FW', birth: '1993-06-25', contract: '2027-06-30', baseElo: 1762, avgRating: 7.36, histMvM: [3, 3.5, 5, 6, 6.5] },
+      { id: 211, name: 'Zeki Çelik',           nat: 'Türkiye',    foot: 'Sağ',     teamId: 17, pos: 'FB', birth: '1997-02-17', contract: '2027-06-30', baseElo: 1775, avgRating: 7.08, histMvM: [15, 10, 7, 6.5, 6] }
+    ];
+
+    // Kronolojik Oynanmış Gerçek Maç Kayıtları (Her maç doğrudan ilgili oyuncuların Elo ve Piyasa Değerini oluşturur!)
+    const OFFICIAL_MATCH_HISTORY = [
+      {
+        id: 5001, date: '2026-10-17', comp: 'ESP1', homeTeam: 'Real Betis', awayTeam: 'FC Barcelona', score: '2-5',
+        performances: [
+          { playerId: 101, rating: 8.85, note: '1 Gol, 2 Asist' },
+          { playerId: 111, rating: 8.10, note: '1 Gol (Barcelona ilk golü)' },
+          { playerId: 107, rating: 7.90, note: '1 Asist, %94 Pas' },
+          { playerId: 216, rating: 8.40, note: '2 Gol' },
+          { playerId: 137, rating: 7.45, note: '7 Top Kazanma' }
+        ]
+      },
+      {
+        id: 5002, date: '2026-10-25', comp: 'ESP1', homeTeam: 'Real Madrid', awayTeam: 'Villarreal', score: '3-1',
+        performances: [
+          { playerId: 103, rating: 8.50, note: '2 Gol' },
+          { playerId: 113, rating: 8.35, note: '1 Gol, 1 Asist (Maçın Yıldızı)' },
+          { playerId: 105, rating: 7.85, note: '1 Asist' },
+          { playerId: 212, rating: 7.75, note: '4 Kilit Pas' },
+          { playerId: 104, rating: 7.60, note: '5 Başarılı Dripling' },
+          { playerId: 116, rating: 7.35, note: '4 Kurtarış' }
+        ]
+      },
+      {
+        id: 5003, date: '2026-11-01', comp: 'TUR1', homeTeam: 'Galatasaray', awayTeam: 'Beşiktaş', score: '2-1',
+        performances: [
+          { playerId: 112, rating: 8.30, note: '1 Gol, 6 Ceza Sahası Şutu' },
+          { playerId: 220, rating: 7.95, note: '1 Gol, 4 Dripling' },
+          { playerId: 208, rating: 7.80, note: '2 Asist' },
+          { playerId: 114, rating: 7.45, note: '8 İkili Mücadele Kazanma' },
+          { playerId: 132, rating: 7.50, note: '6 Top Kapma' },
+          { playerId: 127, rating: 7.55, note: '1 Gol (Beşiktaş)' },
+          { playerId: 221, rating: 6.90, note: '3 Şut' },
+          { playerId: 206, rating: 7.15, note: '1 Asist' }
+        ]
+      },
+      {
+        id: 5004, date: '2026-11-03', comp: 'UCL_LP', homeTeam: 'Galatasaray', awayTeam: 'VfB Stuttgart', score: '2-0',
+        performances: [
+          { playerId: 112, rating: 8.65, note: '1 Gol, 1 Asist (UCL Maçın Adamı)' },
+          { playerId: 220, rating: 8.15, note: '1 Gol' },
+          { playerId: 225, rating: 7.85, note: '1 Asist, %93 Pas' },
+          { playerId: 145, rating: 7.90, note: '9 Sahipsiz Top Kazanma' },
+          { playerId: 132, rating: 7.75, note: 'Gol Yemeden Tamamlama' },
+          { playerId: 203, rating: 7.55, note: '7 Uzaklaştırma' }
+        ]
+      },
+      {
+        id: 5005, date: '2026-11-03', comp: 'UCL_LP', homeTeam: 'FC Barcelona', awayTeam: 'Aston Villa', score: '3-0',
+        performances: [
+          { playerId: 101, rating: 9.05, note: '1 Gol, 1 Asist (UCL Haftanın 11i)' },
+          { playerId: 111, rating: 8.35, note: 'Merkez Hakimiyeti, %96 Pas' },
+          { playerId: 107, rating: 8.15, note: '1 Gol' },
+          { playerId: 216, rating: 8.25, note: '1 Gol, 1 Asist' },
+          { playerId: 137, rating: 7.80, note: 'Gol Yemeden Tamamlama' },
+          { playerId: 143, rating: 6.50, note: '0 İsabetli Şut' }
+        ]
+      },
+      {
+        id: 5006, date: '2026-11-03', comp: 'UCL_LP', homeTeam: 'Atlético Madrid', awayTeam: 'Bayern München', score: '0-2',
+        performances: [
+          { playerId: 118, rating: 8.70, note: '1 Gol, 1 Asist' },
+          { playerId: 110, rating: 8.40, note: '1 Gol' },
+          { playerId: 120, rating: 8.10, note: '1 Asist, 6 Dripling' },
+          { playerId: 218, rating: 6.55, note: 'Mağlubiyet' }
+        ]
+      },
+      {
+        id: 5007, date: '2026-11-03', comp: 'UCL_LP', homeTeam: 'Villarreal', awayTeam: 'Paris Saint-Germain', score: '0-6',
+        performances: [
+          { playerId: 136, rating: 9.10, note: '1 Gol, 2 Asist' },
+          { playerId: 140, rating: 8.95, note: '2 Gol, 1 Asist' },
+          { playerId: 215, rating: 8.60, note: '2 Gol' },
+          { playerId: 141, rating: 8.30, note: '1 Gol, %95 Pas' },
+          { playerId: 124, rating: 8.20, note: '2 Asist' },
+          { playerId: 142, rating: 7.90, note: '1 Asist' }
+        ]
+      },
+      {
+        id: 5008, date: '2026-11-04', comp: 'UCL_LP', homeTeam: 'Fenerbahçe', awayTeam: 'Liverpool', score: '3-2',
+        performances: [
+          { playerId: 219, rating: 8.80, note: '2 Gol (UCL Zaferi)' },
+          { playerId: 224, rating: 8.45, note: '1 Gol, 1 Asist' },
+          { playerId: 133, rating: 7.95, note: '1 Asist, 8 Top Kazanma' },
+          { playerId: 146, rating: 7.65, note: 'Kaptan, 9 Uzaklaştırma' },
+          { playerId: 204, rating: 7.50, note: '6 Top Kapma' },
+          { playerId: 119, rating: 7.75, note: '1 Gol, 1 Asist (Liverpool)' },
+          { playerId: 214, rating: 7.45, note: '1 Gol (Liverpool)' },
+          { playerId: 117, rating: 6.40, note: '3 Yenilen Gol' }
+        ]
+      },
+      {
+        id: 5009, date: '2026-11-04', comp: 'UCL_LP', homeTeam: 'AEK Athens', awayTeam: 'Real Madrid', score: '2-3',
+        performances: [
+          { playerId: 103, rating: 8.75, note: '2 Gol' },
+          { playerId: 113, rating: 8.40, note: '1 Gol, 1 Asist (90 Dk Müthiş Performans)' },
+          { playerId: 105, rating: 7.95, note: '1 Asist' },
+          { playerId: 104, rating: 7.80, note: '1 Asist' },
+          { playerId: 212, rating: 7.65, note: 'Merkez Kontrolü' }
+        ]
+      },
+      {
+        id: 5010, date: '2026-11-04', comp: 'UCL_LP', homeTeam: 'Slavia Praha', awayTeam: 'Arsenal', score: '1-2',
+        performances: [
+          { playerId: 106, rating: 8.55, note: '1 Gol, 1 Asist' },
+          { playerId: 213, rating: 8.15, note: '1 Gol, 4 Kilit Pas' },
+          { playerId: 108, rating: 7.75, note: '1 Asist' },
+          { playerId: 109, rating: 7.60, note: 'Savunma Liderliği' }
+        ]
+      },
+      {
+        id: 5011, date: '2026-11-04', comp: 'UCL_LP', homeTeam: 'RB Leipzig', awayTeam: 'Manchester City', score: '2-3',
+        performances: [
+          { playerId: 102, rating: 8.65, note: '2 Gol' },
+          { playerId: 129, rating: 8.10, note: '1 Gol, 1 Asist' },
+          { playerId: 217, rating: 7.45, note: '1 Asist' },
+          { playerId: 130, rating: 7.85, note: '1 Gol, 7 Dripling (Leipzig)' }
+        ]
+      },
+      {
+        id: 5012, date: '2026-11-08', comp: 'TUR1', homeTeam: 'Trabzonspor', awayTeam: 'Kasımpaşa', score: '3-1',
+        performances: [
+          { playerId: 222, rating: 8.45, note: '1 Gol, 1 Asist' },
+          { playerId: 147, rating: 8.20, note: '2 Gol' },
+          { playerId: 202, rating: 7.50, note: '5 Kurtarış' }
+        ]
+      },
+      {
+        id: 5013, date: '2026-11-12', comp: 'NAT_UNL', homeTeam: 'Türkiye', awayTeam: 'Belçika', score: '1-2',
+        performances: [
+          { playerId: 113, rating: 7.85, note: '1 Gol (Bireysel Üstün Performans -> Değer Artışı)' },
+          { playerId: 125, rating: 7.40, note: '1 Asist, 4 Dripling' },
+          { playerId: 128, rating: 7.25, note: '3 Kilit Pas' },
+          { playerId: 127, rating: 7.10, note: 'Mücadeleci Orta Saha' },
+          { playerId: 129, rating: 8.25, note: '1 Gol, 1 Asist (Belçika)' },
+          { playerId: 223, rating: 7.80, note: '1 Gol (Belçika)' }
+        ]
+      },
+      {
+        id: 5014, date: '2026-11-12', comp: 'NAT_UNL', homeTeam: 'Çekya', awayTeam: 'İspanya', score: '0-2',
+        performances: [
+          { playerId: 101, rating: 8.50, note: '1 Gol, 1 Asist' },
+          { playerId: 111, rating: 8.05, note: '1 Gol, Kaptan' },
+          { playerId: 107, rating: 7.75, note: '1 Asist' },
+          { playerId: 137, rating: 7.60, note: 'Gol Yemeden Tamamlama' }
+        ]
+      },
+      {
+        id: 5015, date: '2026-11-12', comp: 'NAT_UNL', homeTeam: 'İngiltere', awayTeam: 'Hırvatistan', score: '2-1',
+        performances: [
+          { playerId: 105, rating: 8.40, note: '1 Gol, 1 Asist' },
+          { playerId: 106, rating: 8.05, note: '1 Gol' },
+          { playerId: 110, rating: 7.65, note: '1 Asist' },
+          { playerId: 108, rating: 7.50, note: 'Orta Saha Kontrolü' },
+          { playerId: 217, rating: 7.35, note: '1 Gol (Hırvatistan)' }
+        ]
+      }
+    ];
+
+    let state = {
+      teams: [],
+      players: [],
+      matches: [],
+      mvHistory: [],
+      activeProfilePlayerId: 101,
+      activeProfileClubId: 1,
+      eloRankingMode: 'CLUBS',
+      tierQuickFilter: 'ALL'
+    };
+
+    let chartPpHistory = null;
+    let chartCpHistory = null;
+
+    function toggleReadabilityTheme() {
+      const root = document.documentElement;
+      root.classList.toggle('light-mode');
+      const isLight = root.classList.contains('light-mode');
+      showToast(isLight ? 'Açık görünüm aktif edildi.' : 'Koyu görünüm aktif edildi.');
+    }
+
+    function setTierQuickFilter(tierMode) {
+      state.tierQuickFilter = tierMode;
+      ['all', '1', '2', '3'].forEach(k => {
+        const btn = document.getElementById('btn-tier-' + k);
+        if (!btn) return;
+        const active = (tierMode === 'ALL' && k === 'all') || (tierMode === 'TIER' + k);
+        btn.className = active
+          ? 'px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs transition-all'
+          : 'px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-all';
+      });
+      document.getElementById('filter-league').value = 'ALL';
+      updateTeamFilterDropdown();
+      renderDashboard();
+    }
+
+    function calcExactAge(birthStr) {
+      const b = new Date(birthStr + 'T00:00:00Z');
+      return Math.max(16.0, (REF_DATE - b) / (1000 * 60 * 60 * 24 * 365.2425));
+    }
+
+    function calcRemainingContractYears(contractStr) {
+      const c = new Date(contractStr + 'T00:00:00Z');
+      return Math.max(0.2, (c - REF_DATE) / (1000 * 60 * 60 * 24 * 365.2425));
+    }
+
+    function computeDMVComponents(params) {
+      const posCfg = POS_PARAMS[params.pos] || POS_PARAMS.FW;
+      const V0 = 155000;
+      const vBase = V0 * posCfg.baseMult * Math.exp(posCfg.theta * ((params.elo - 1000) / 100));
+      const fTrend = 1 + 0.08 * Math.tanh((params.avgRating - 7.15) / 0.65);
+
+      const peak = posCfg.peakAge;
+      const sigma = params.age <= peak ? 6.2 : 3.8;
+      const aCurve = Math.exp(-Math.pow(params.age - peak, 2) / (2 * sigma * sigma));
+
+      let pYouth = 0;
+      if (params.age < 23.0) {
+        const expectedAgeElo = 1580 + (params.age - 17) * 35;
+        const eloSurplus = Math.max(0, (params.elo - expectedAgeElo) / 220);
+        pYouth = 0.42 * Math.pow((23.0 - params.age) / 6.0, 1.25) * eloSurplus;
+      }
+      const aFactor = aCurve + pYouth;
+      const mTier = params.mTier;
+
+      const cMin = 0.42;
+      const lambdaC = 0.90;
+      const cContract = cMin + (1 - cMin) * (1 - Math.exp(-lambdaC * params.contractYears));
+
+      const vLinear = vBase * fTrend * aFactor * mTier * cContract;
+      const V_CEIL = 235000000;
+      const beta = 2.65;
+      const vSaturated = (V_CEIL * vLinear) / Math.pow(Math.pow(V_CEIL, beta) + Math.pow(vLinear, beta), 1 / beta);
+
+      return { vBase, fTrend, aCurve, pYouth, aFactor, mTier, cContract, vRaw: Math.round(vSaturated) };
+    }
+
+    // KESİN VE MONOTONİK MAÇ PUANI -> DEĞER DEĞİŞİM FONKSİYONU
+    // Nötr eşik = 6.75. 6.80 ve üzeri oynayan her oyuncu (takımı kaybetse bile) KESİNLİKLE değer kazanır!
+    function computeMatchDeltaFromRating(player, matchRating, comp) {
+      const NEUTRAL_RATING = 6.75;
+      const ratingDiff = matchRating - NEUTRAL_RATING;
+
+      // Yaş duyarlılığı: Genç oyuncular iyi performanslarda daha hızlı değer kazanır
+      const ageBoost = player.age < 22.5 ? 1.25 : (player.age > 30.5 ? 0.72 : 1.00);
+
+      // Normalize sinyal: 8.75 reyting -> +1.0 tam tavan artışı; 6.75 -> 0; 5.75 -> -0.5 düşüş
+      const normSignal = Math.max(-1.0, Math.min(1.0, ratingDiff / 2.0));
+      const pctChange = normSignal * comp.maxMvClip * ageBoost;
+
+      const deltaEur = Math.round(player.marketValue * pctChange);
+      const deltaElo = Number((12.0 * comp.wComp * normSignal).toFixed(2));
+
+      return {
+        pctChange,
+        deltaEur,
+        deltaElo
+      };
+    }
+
+    function fmtEur(val) {
+      const abs = Math.abs(val);
+      const sign = val < 0 ? '-' : '';
+      if (abs >= 1e9) return sign + '€' + (abs / 1e9).toFixed(2) + 'B';
+      if (abs >= 1e6) return sign + '€' + (abs / 1e6).toFixed(2) + 'M';
+      if (abs >= 1e3) return sign + '€' + (abs / 1e3).toFixed(0) + 'K';
+      return sign + '€' + abs;
+    }
+
+    function getRatingBadgeClass(r) {
+      if (r >= 7.80) return 'bg-emerald-500 text-slate-950 border-emerald-600';
+      if (r >= 7.35) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+      if (r >= 6.80) return 'bg-amber-500/20 text-amber-400 border-amber-500/40';
+      return 'bg-rose-500/20 text-rose-400 border-rose-500/40';
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = 'pointer-events-auto px-4 py-3 rounded-xl border border-emerald-500 bg-slate-900 text-emerald-200 shadow-xl text-xs font-medium flex items-center justify-between gap-3';
+      el.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white font-bold">✕</button>`;
+      container.appendChild(el);
+      setTimeout(() => { if (el && el.parentElement) el.remove(); }, 3500);
+    }
+
+    // -----------------------------------------------------------------------
+    // SİSTEM BAŞLATMA: TÜM MAÇLARI KRONOLOJİK İŞLEYEREK GÜNCEL DEĞERLERİ ÜRETİR
+    // -----------------------------------------------------------------------
+    function initAppState() {
+      state.teams = JSON.parse(JSON.stringify(INITIAL_TEAMS));
+      state.mvHistory = [];
+
+      // 1. Oyuncuları 2026 sezon başı baz değerleriyle başlat
+      state.players = JSON.parse(JSON.stringify(INITIAL_PLAYERS)).map(p => {
+        const team = state.teams.find(t => t.id === p.teamId);
+        const comp = team ? (TOURNAMENTS[team.league] || TOURNAMENTS.ENG1) : TOURNAMENTS.ENG1;
+        const age = calcExactAge(p.birth);
+        const contractYears = calcRemainingContractYears(p.contract);
+        const mTier = comp.lComp;
+        const dmv = computeDMVComponents({
+          pos: p.pos, elo: p.baseElo, avgRating: p.avgRating, age, contractYears, mTier
+        });
+        const baseMv = Math.round(p.histMvM[4] * 1e6);
+
+        // 2022-2025 yıllık sezon sonu geçmişini kaydet
+        const years = ['2022-06-01', '2023-06-01', '2024-06-01', '2025-06-01'];
+        years.forEach((yr, idx) => {
+          const hVal = Math.round(p.histMvM[idx] * 1e6);
+          const prevVal = idx === 0 ? hVal : Math.round(p.histMvM[idx - 1] * 1e6);
+          state.mvHistory.push({
+            playerId: p.id,
+            date: yr,
+            compName: 'Sezon Sonu Değerlemesi',
+            matchLabel: `${yr.slice(0, 4)} Sezon Kapanışı`,
+            rating: p.avgRating,
+            eloAfter: Math.round(p.baseElo - (4 - idx) * 18),
+            eloDelta: idx === 0 ? 0 : 18,
+            mvAfter: hVal,
+            mvDelta: hVal - prevVal
+          });
+        });
+
+        return {
+          ...p,
+          elo: p.baseElo,
+          age,
+          contractYears,
+          mTier,
+          dmv,
+          marketValue: baseMv,
+          peakMarketValue: Math.max(baseMv, Math.round(Math.max(...p.histMvM) * 1e6)),
+          lastMvDelta: 0,
+          lastEloDelta: 0,
+          lastMatchLabel: ''
+        };
+      });
+
+      // 2. OFFICIAL_MATCH_HISTORY içindeki tüm gerçek maçları kronolojik sırayla işle
+      state.matches = [];
+      OFFICIAL_MATCH_HISTORY.forEach(m => {
+        const comp = TOURNAMENTS[m.comp] || TOURNAMENTS.ENG1;
+        const enrichedPerfs = [];
+
+        m.performances.forEach(perf => {
+          const player = state.players.find(x => x.id === perf.playerId);
+          if (!player) return;
+
+          const deltaObj = computeMatchDeltaFromRating(player, perf.rating, comp);
+          player.elo = Number((player.elo + deltaObj.deltaElo).toFixed(2));
+          player.lastEloDelta = deltaObj.deltaElo;
+          player.marketValue = Math.min(225000000, Math.max(250000, player.marketValue + deltaObj.deltaEur));
+          player.peakMarketValue = Math.max(player.peakMarketValue, player.marketValue);
+          player.lastMvDelta = deltaObj.deltaEur;
+          player.lastMatchLabel = `${m.homeTeam} ${m.score} ${m.awayTeam}`;
+          player.avgRating = Number((0.85 * player.avgRating + 0.15 * perf.rating).toFixed(2));
+          player.histMvM[4] = Number((player.marketValue / 1e6).toFixed(2));
+
+          state.mvHistory.push({
+            playerId: player.id,
+            date: m.date,
+            compName: comp.name,
+            matchLabel: `${m.homeTeam} ${m.score} ${m.awayTeam}`,
+            rating: perf.rating,
+            eloAfter: player.elo,
+            eloDelta: deltaObj.deltaElo,
+            mvAfter: player.marketValue,
+            mvDelta: deltaObj.deltaEur
+          });
+
+          enrichedPerfs.push({
+            playerId: player.id,
+            playerName: player.name,
+            pos: player.pos,
+            rating: perf.rating,
+            note: perf.note,
+            eloDelta: deltaObj.deltaElo,
+            mvDelta: deltaObj.deltaEur,
+            mvAfter: player.marketValue
+          });
+        });
+
+        state.matches.unshift({
+          ...m,
+          compName: comp.name,
+          compType: comp.type,
+          enrichedPerfs
+        });
+      });
+
+      populateDropdowns();
+      updateTopKPIs();
+      renderDashboard();
+      renderEloRankingsPage();
+      renderMatchesPage();
+      renderClubProfilePage(state.activeProfileClubId);
+      renderPlayerProfilePage(state.activeProfilePlayerId);
+    }
+
+    function populateDropdowns() {
+      const filterLeague = document.getElementById('filter-league');
+      const eloLeague = document.getElementById('elo-filter-league');
+      const ppSelect = document.getElementById('pp-player-select');
+      const cpSelect = document.getElementById('club-profile-select');
+
+      const domesticLeagues = Object.values(TOURNAMENTS).filter(c => c.type === 'DOMESTIC');
+      const leagueOpts = '<option value="ALL">Tüm Avrupa Ligleri (20 Lig)</option>' +
+        domesticLeagues.map(l => `<option value="${l.code}">${l.name}</option>`).join('');
+      filterLeague.innerHTML = leagueOpts;
+      if (eloLeague) eloLeague.innerHTML = leagueOpts;
+
+      updateTeamFilterDropdown();
+
+      const playerOpts = state.players
+        .slice()
+        .sort((a, b) => b.marketValue - a.marketValue)
+        .map(p => {
+          const t = state.teams.find(x => x.id === p.teamId);
+          return `<option value="${p.id}">${p.name} (${t ? t.name : ''} • ${fmtEur(p.marketValue)})</option>`;
+        }).join('');
+      if (ppSelect) ppSelect.innerHTML = playerOpts;
+
+      const sortedTeams = state.teams.slice().sort((a, b) => b.elo - a.elo);
+      if (cpSelect) {
+        cpSelect.innerHTML = sortedTeams.map(t => `<option value="${t.id}">${t.name} (${t.country} • Elo: ${t.elo.toFixed(0)})</option>`).join('');
+      }
+    }
+
+    function updateTeamFilterDropdown() {
+      const leagueVal = document.getElementById('filter-league').value;
+      const filterTeam = document.getElementById('filter-team');
+      const relevantTeams = state.teams.filter(t => {
+        const comp = TOURNAMENTS[t.league];
+        const tierMatch = state.tierQuickFilter === 'ALL'
+          || (state.tierQuickFilter === 'TIER1' && comp && comp.tier === 1)
+          || (state.tierQuickFilter === 'TIER2' && comp && comp.tier === 2)
+          || (state.tierQuickFilter === 'TIER3' && comp && comp.tier >= 3);
+        const leagueMatch = leagueVal === 'ALL' || t.league === leagueVal;
+        return tierMatch && leagueMatch;
+      });
+
+      filterTeam.innerHTML = `<option value="ALL">Tüm Kulüpler (${relevantTeams.length})</option>` +
+        relevantTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    }
+
+    function onLeagueFilterChange() {
+      updateTeamFilterDropdown();
+      renderDashboard();
+    }
+
+    function updateTopKPIs() {
+      const sortedPlayers = state.players.slice().sort((a, b) => b.marketValue - a.marketValue);
+      if (sortedPlayers.length > 0) {
+        const topP = sortedPlayers[0];
+        document.getElementById('kpi-top-player').textContent = topP.name;
+        document.getElementById('kpi-top-player-sub').textContent = `${fmtEur(topP.marketValue)} • ${topP.avgRating.toFixed(2)} Maç Puanı`;
+      }
+
+      const sortedTeams = state.teams.slice().sort((a, b) => b.elo - a.elo);
+      if (sortedTeams.length > 0) {
+        document.getElementById('kpi-top-team').textContent = `${sortedTeams[0].name} (${sortedTeams[0].elo.toFixed(0)})`;
+      }
+    }
+
+    function switchTab(tabId) {
+      const tabs = ['dashboard', 'elo-rankings', 'matches', 'club-profile', 'player-profile'];
+      tabs.forEach(t => {
+        const sec = document.getElementById('tab-' + t);
+        const btn = document.getElementById('nav-' + t);
+        if (sec) {
+          if (t === tabId) sec.classList.remove('hidden');
+          else sec.classList.add('hidden');
+        }
+        if (btn) {
+          if (t === tabId) {
+            btn.className = 'nav-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all bg-emerald-500 text-slate-950 shadow';
+          } else {
+            btn.className = 'nav-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-200 hover:bg-white/10';
+          }
+        }
+      });
+
+      if (tabId === 'dashboard') renderDashboard();
+      else if (tabId === 'elo-rankings') renderEloRankingsPage();
+      else if (tabId === 'matches') renderMatchesPage();
+      else if (tabId === 'club-profile') renderClubProfilePage(state.activeProfileClubId);
+      else if (tabId === 'player-profile') renderPlayerProfilePage(state.activeProfilePlayerId);
+    }
+
+    // -----------------------------------------------------------------------
+    // SAYFA 1: EN DEĞERLİ OYUNCULAR
+    // -----------------------------------------------------------------------
+    function renderDashboard() {
+      const q = (document.getElementById('filter-search').value || '').toLowerCase().trim();
+      const leagueFilter = document.getElementById('filter-league').value;
+      const teamFilter = document.getElementById('filter-team').value;
+      const posFilter = document.getElementById('filter-pos').value;
+      const ageGroup = (document.getElementById('filter-age-group') || {}).value || 'ALL';
+      const sortBy = document.getElementById('filter-sort').value;
+
+      let filtered = state.players.filter(p => {
+        const team = state.teams.find(t => t.id === p.teamId);
+        const teamName = team ? team.name.toLowerCase() : '';
+        const teamLeague = team ? team.league : '';
+        const comp = TOURNAMENTS[teamLeague];
+        const tierMatch = state.tierQuickFilter === 'ALL'
+          || (state.tierQuickFilter === 'TIER1' && comp && comp.tier === 1)
+          || (state.tierQuickFilter === 'TIER2' && comp && comp.tier === 2)
+          || (state.tierQuickFilter === 'TIER3' && comp && comp.tier >= 3);
+
+        const matchQ = !q || p.name.toLowerCase().includes(q) || teamName.includes(q) || (p.nat || '').toLowerCase().includes(q);
+        const matchLeague = leagueFilter === 'ALL' || teamLeague === leagueFilter;
+        const matchTeam = teamFilter === 'ALL' || String(p.teamId) === teamFilter;
+        const matchPos = posFilter === 'ALL' || p.pos === posFilter;
+
+        let matchAge = true;
+        if (ageGroup === 'U21') matchAge = p.age <= 21.5;
+        else if (ageGroup === 'U24') matchAge = p.age <= 24.5;
+        else if (ageGroup === 'PRIME') matchAge = p.age > 24.0 && p.age <= 29.5;
+        else if (ageGroup === 'VET') matchAge = p.age > 29.5;
+
+        return tierMatch && matchQ && matchLeague && matchTeam && matchPos && matchAge;
+      });
+
+      filtered.sort((a, b) => {
+        if (sortBy === 'mv_asc') return a.marketValue - b.marketValue;
+        if (sortBy === 'elo_desc') return b.elo - a.elo;
+        if (sortBy === 'rating_desc') return b.avgRating - a.avgRating;
+        if (sortBy === 'delta_desc') return b.lastMvDelta - a.lastMvDelta;
+        return b.marketValue - a.marketValue;
+      });
+
+      const badgeEl = document.getElementById('player-count-badge');
+      if (badgeEl) badgeEl.textContent = `${filtered.length} Oyuncu Listeleniyor`;
+
+      const tbody = document.getElementById('dashboard-player-tbody');
+      tbody.innerHTML = filtered.map((p, idx) => {
+        const team = state.teams.find(t => t.id === p.teamId);
+        const isPosDelta = p.lastMvDelta >= 0;
+        const deltaStr = (isPosDelta ? '+' : '') + fmtEur(p.lastMvDelta);
+        const deltaCls = isPosDelta ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+        const rCls = getRatingBadgeClass(p.avgRating);
+        const posCfg = POS_PARAMS[p.pos] || POS_PARAMS.FW;
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition-colors">
+            <td class="py-3.5 px-4 font-mono text-xs font-bold text-slate-400">${idx + 1}</td>
+            <td class="py-3.5 px-4">
+              <button onclick="openPlayerProfile(${p.id})" class="font-extrabold text-white hover:text-emerald-400 text-left text-sm sm:text-base transition-colors">
+                ${p.name}
+              </button>
+              <div class="text-xs text-slate-400">${posCfg.label} • Sözleşme: ${p.contract.slice(0, 4)}</div>
+            </td>
+            <td class="py-3.5 px-3">
+              <button onclick="openClubProfile(${team ? team.id : 1})" class="font-semibold text-cyan-400 hover:underline text-left text-xs sm:text-sm">
+                ${team ? team.name : ''}
+              </button>
+              <div class="text-[11px] font-mono text-slate-400">${team ? team.league : ''}</div>
+            </td>
+            <td class="py-3.5 px-3 text-center">
+              <span class="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-slate-800 text-slate-200 border border-slate-700">${p.pos}</span>
+            </td>
+            <td class="py-3.5 px-2 text-center mono-num font-semibold text-slate-200">${Math.floor(p.age)}</td>
+            <td class="py-3.5 px-3 text-center text-xs text-slate-300">${p.nat || '-'}</td>
+            <td class="py-3.5 px-3 text-right mono-num font-bold text-white">${p.elo.toFixed(0)}</td>
+            <td class="py-3.5 px-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-lg border mono-num font-extrabold text-xs ${rCls}">${p.avgRating.toFixed(2)}</span>
+            </td>
+            <td class="py-3.5 px-4 text-right">
+              <span class="px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mono-num font-extrabold text-sm sm:text-base">${fmtEur(p.marketValue)}</span>
+            </td>
+            <td class="py-3.5 px-3 text-right">
+              <span class="px-2 py-0.5 rounded border text-xs mono-num font-semibold ${deltaCls}" title="${p.lastMatchLabel || 'Son Maç'}">${deltaStr}</span>
+            </td>
+            <td class="py-3.5 px-4 text-center">
+              <button onclick="openPlayerProfile(${p.id})" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-slate-200 text-xs font-bold transition-all">
+                Profil →
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // -----------------------------------------------------------------------
+    // SAYFA 2: ELO RATING SIRALAMASI
+    // -----------------------------------------------------------------------
+    function setEloRankingMode(mode) {
+      state.eloRankingMode = mode;
+      const bClub = document.getElementById('btn-elo-mode-clubs');
+      const bPlay = document.getElementById('btn-elo-mode-players');
+      if (mode === 'CLUBS') {
+        bClub.className = 'px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs transition-all';
+        bPlay.className = 'px-4 py-2 rounded-lg bg-slate-800 text-slate-200 font-semibold text-xs transition-all';
+      } else {
+        bPlay.className = 'px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs transition-all';
+        bClub.className = 'px-4 py-2 rounded-lg bg-slate-800 text-slate-200 font-semibold text-xs transition-all';
+      }
+      renderEloRankingsPage();
+    }
+
+    function renderEloRankingsPage() {
+      const wrap = document.getElementById('elo-rankings-table-wrap');
+      if (!wrap) return;
+
+      const q = (document.getElementById('elo-filter-search').value || '').toLowerCase().trim();
+      const leagueF = document.getElementById('elo-filter-league').value;
+      const tierF = document.getElementById('elo-filter-tier').value;
+      const uefaF = document.getElementById('elo-filter-uefa').value;
+      const sortF = document.getElementById('elo-filter-sort').value;
+
+      if (state.eloRankingMode === 'CLUBS') {
+        let list = state.teams.filter(t => {
+          const comp = TOURNAMENTS[t.league];
+          const tTier = comp ? comp.tier : 1;
+          const mQ = !q || t.name.toLowerCase().includes(q) || t.country.toLowerCase().includes(q) || t.league.toLowerCase().includes(q);
+          const mL = leagueF === 'ALL' || t.league === leagueF;
+          const mT = tierF === 'ALL' || (tierF === '1' && tTier === 1) || (tierF === '2' && tTier === 2) || (tierF === '3' && tTier >= 3);
+          const mU = uefaF === 'ALL' || t.uefa === uefaF;
+          return mQ && mL && mT && mU;
+        });
+
+        list.sort((a, b) => {
+          if (sortF === 'growth_5y') return (b.elo - b.histElo[0]) - (a.elo - a.histElo[0]);
+          if (sortF === 'delta_last') return b.lastDelta - a.lastDelta;
+          return b.elo - a.elo;
+        });
+
+        wrap.innerHTML = `
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-900 text-xs font-bold uppercase text-slate-400 border-b border-slate-800/60">
+                <th class="py-3 px-4">#</th>
+                <th class="py-3 px-4">Kulüp</th>
+                <th class="py-3 px-3 text-center">Ülke & Lig</th>
+                <th class="py-3 px-3 text-center">Avrupa Kupası</th>
+                <th class="py-3 px-3 text-right">2022 Elo</th>
+                <th class="py-3 px-3 text-right">5 Yıllık Değişim</th>
+                <th class="py-3 px-4 text-right">Güncel Elo (2026)</th>
+                <th class="py-3 px-3 text-right">Son Maç $\Delta$</th>
+                <th class="py-3 px-4 text-center">Kulüp Profili</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+              ${list.map((t, idx) => {
+                const diff5y = (t.elo - t.histElo[0]).toFixed(1);
+                const diffCls = diff5y >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                const lastCls = t.lastDelta >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                return `
+                  <tr class="hover:bg-slate-800/40">
+                    <td class="py-3 px-4 font-mono text-xs font-bold text-slate-400">${idx + 1}</td>
+                    <td class="py-3 px-4 font-extrabold text-white">
+                      <button onclick="openClubProfile(${t.id})" class="hover:text-emerald-400 hover:underline">${t.name}</button>
+                    </td>
+                    <td class="py-3 px-3 text-center font-mono text-xs text-slate-300">${t.country} • ${t.league}</td>
+                    <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono text-xs font-bold">${t.uefa}</span></td>
+                    <td class="py-3 px-3 text-right mono-num text-slate-400">${t.histElo[0]}</td>
+                    <td class="py-3 px-3 text-right mono-num font-semibold ${diffCls}">${diff5y >= 0 ? '+' : ''}${diff5y}</td>
+                    <td class="py-3 px-4 text-right mono-num font-extrabold text-base text-white">${t.elo.toFixed(1)}</td>
+                    <td class="py-3 px-3 text-right mono-num ${lastCls}">${t.lastDelta >= 0 ? '+' : ''}${t.lastDelta.toFixed(2)}</td>
+                    <td class="py-3 px-4 text-center">
+                      <button onclick="openClubProfile(${t.id})" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-xs font-bold">Kulüp Detayı →</button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+      } else {
+        let pList = state.players.filter(p => {
+          const team = state.teams.find(t => t.id === p.teamId);
+          const comp = team ? TOURNAMENTS[team.league] : null;
+          const tTier = comp ? comp.tier : 1;
+          const mQ = !q || p.name.toLowerCase().includes(q) || (team && team.name.toLowerCase().includes(q));
+          const mL = leagueF === 'ALL' || (team && team.league === leagueF);
+          const mT = tierF === 'ALL' || (tierF === '1' && tTier === 1) || (tierF === '2' && tTier === 2) || (tierF === '3' && tTier >= 3);
+          const mU = uefaF === 'ALL' || (team && team.uefa === uefaF);
+          return mQ && mL && mT && mU;
+        });
+
+        pList.sort((a, b) => {
+          if (sortF === 'delta_last') return b.lastEloDelta - a.lastEloDelta;
+          return b.elo - a.elo;
+        });
+
+        wrap.innerHTML = `
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-900 text-xs font-bold uppercase text-slate-400 border-b border-slate-800/60">
+                <th class="py-3 px-4">#</th>
+                <th class="py-3 px-4">Oyuncu</th>
+                <th class="py-3 px-3">Kulüp & Lig</th>
+                <th class="py-3 px-2 text-center">Mevki</th>
+                <th class="py-3 px-3 text-right">Bireysel Elo</th>
+                <th class="py-3 px-3 text-right">Son Maç $\Delta Elo$</th>
+                <th class="py-3 px-3 text-center">Ort. Maç Puanı</th>
+                <th class="py-3 px-4 text-right">Piyasa Değeri</th>
+                <th class="py-3 px-4 text-center">Profil</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+              ${pList.map((p, idx) => {
+                const team = state.teams.find(t => t.id === p.teamId);
+                return `
+                  <tr class="hover:bg-slate-800/40">
+                    <td class="py-3 px-4 font-mono text-xs font-bold text-slate-400">${idx + 1}</td>
+                    <td class="py-3 px-4 font-extrabold text-white">
+                      <button onclick="openPlayerProfile(${p.id})" class="hover:text-emerald-400 hover:underline">${p.name}</button>
+                    </td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${team ? team.name : ''} (${team ? team.league : ''})</td>
+                    <td class="py-3 px-2 text-center font-mono text-xs">${p.pos}</td>
+                    <td class="py-3 px-3 text-right mono-num font-extrabold text-base text-white">${p.elo.toFixed(0)}</td>
+                    <td class="py-3 px-3 text-right mono-num ${p.lastEloDelta >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${p.lastEloDelta >= 0 ? '+' : ''}${p.lastEloDelta.toFixed(2)}</td>
+                    <td class="py-3 px-3 text-center mono-num font-bold text-amber-400">${p.avgRating.toFixed(2)}</td>
+                    <td class="py-3 px-4 text-right mono-num font-bold text-emerald-400">${fmtEur(p.marketValue)}</td>
+                    <td class="py-3 px-4 text-center">
+                      <button onclick="openPlayerProfile(${p.id})" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-xs font-bold">Profil →</button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // SAYFA 3: SON MAÇLAR VE MAÇ BAZLI OYUNCU DEĞER DEĞİŞİMLERİ
+    // -----------------------------------------------------------------------
+    function renderMatchesPage() {
+      const compF = (document.getElementById('match-filter-comp') || {}).value || 'ALL';
+      const container = document.getElementById('matches-feed-container');
+      if (!container) return;
+
+      const filteredMatches = state.matches.filter(m => {
+        if (compF === 'ALL') return true;
+        return m.compType === compF;
+      });
+
+      container.innerHTML = filteredMatches.map(m => {
+        return `
+          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
+              <div class="flex items-center gap-2.5">
+                <span class="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-mono text-xs font-bold">${m.compName}</span>
+                <span class="text-xs font-mono text-slate-400">${m.date}</span>
+              </div>
+              <div class="text-base sm:text-lg font-extrabold text-white mono-num">
+                ${m.homeTeam} <span class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 mx-1">${m.score}</span> ${m.awayTeam}
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              ${m.enrichedPerfs.map(ep => {
+                const isPos = ep.mvDelta >= 0;
+                const dStr = (isPos ? '+' : '') + fmtEur(ep.mvDelta);
+                const dCls = isPos ? 'text-emerald-400' : 'text-rose-400';
+                const rCls = getRatingBadgeClass(ep.rating);
+                return `
+                  <div onclick="openPlayerProfile(${ep.playerId})" class="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 hover:border-emerald-500/50 cursor-pointer flex items-center justify-between gap-2 transition-all">
+                    <div>
+                      <div class="font-bold text-white text-xs sm:text-sm">${ep.playerName} <span class="text-[10px] font-mono text-slate-400">(${ep.pos})</span></div>
+                      <div class="text-[11px] text-slate-400">${ep.note}</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                      <span class="px-2 py-0.5 rounded border mono-num font-extrabold text-xs ${rCls}">${ep.rating.toFixed(2)}</span>
+                      <div class="mono-num font-bold text-xs ${dCls} mt-0.5">${dStr}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // -----------------------------------------------------------------------
+    // SAYFA 4: KULÜP PROFİLİ SAYFASI
+    // -----------------------------------------------------------------------
+    function openClubProfile(teamId) {
+      state.activeProfileClubId = Number(teamId);
+      const sel = document.getElementById('club-profile-select');
+      if (sel) sel.value = String(teamId);
+      renderClubProfilePage(teamId);
+      switchTab('club-profile');
+    }
+
+    function renderClubProfilePage(teamId) {
+      const team = state.teams.find(t => t.id === Number(teamId)) || state.teams[0];
+      if (!team) return;
+      state.activeProfileClubId = team.id;
+
+      const sortedByElo = state.teams.slice().sort((a, b) => b.elo - a.elo);
+      const rank = sortedByElo.findIndex(t => t.id === team.id) + 1;
+      const squad = state.players.filter(p => p.teamId === team.id).sort((a, b) => b.marketValue - a.marketValue);
+      const squadMv = squad.reduce((acc, p) => acc + p.marketValue, 0);
+      const diff5y = (team.elo - team.histElo[0]).toFixed(1);
+
+      document.getElementById('cp-badge-box').textContent = `#${rank}`;
+      document.getElementById('cp-name').textContent = team.name;
+      document.getElementById('cp-league-badge').textContent = `${team.league} • ${team.uefa}`;
+      document.getElementById('cp-subtitle').textContent = `Ülke: ${team.country} • 5 Yıllık Elo Değişimi (2022→2026): ${diff5y >= 0 ? '+' : ''}${diff5y}`;
+      document.getElementById('cp-elo-val').textContent = team.elo.toFixed(1);
+      document.getElementById('cp-elo-delta').textContent = `Son Maç: ${team.lastDelta >= 0 ? '+' : ''}${team.lastDelta.toFixed(2)} Elo`;
+      document.getElementById('cp-total-mv').textContent = squadMv > 0 ? fmtEur(squadMv) : 'Kadro Değeri';
+      document.getElementById('cp-player-count').textContent = `${squad.length} Yıldız Oyuncu`;
+
+      const squadTbody = document.getElementById('cp-squad-tbody');
+      if (squad.length === 0) {
+        squadTbody.innerHTML = `<tr><td colspan="6" class="py-6 px-4 text-center text-xs text-slate-400">Bu kulübün 5 yıllık takım Elo geçmişi sağdaki grafikte yer almaktadır.</td></tr>`;
+      } else {
+        squadTbody.innerHTML = squad.map(p => `
+          <tr class="hover:bg-slate-800/40">
+            <td class="py-3 px-4">
+              <button onclick="openPlayerProfile(${p.id})" class="font-bold text-white hover:text-emerald-400 hover:underline">${p.name}</button>
+              <div class="text-xs text-slate-400">${p.nat || ''} • Sözleşme: ${p.contract}</div>
+            </td>
+            <td class="py-3 px-2 text-center font-mono text-xs">${p.pos}</td>
+            <td class="py-3 px-2 text-center mono-num">${Math.floor(p.age)}</td>
+            <td class="py-3 px-3 text-right mono-num font-bold text-white">${p.elo.toFixed(0)}</td>
+            <td class="py-3 px-3 text-center mono-num font-bold text-amber-400">${p.avgRating.toFixed(2)}</td>
+            <td class="py-3 px-4 text-right mono-num font-extrabold text-emerald-400">${fmtEur(p.marketValue)}</td>
+          </tr>
+        `).join('');
+      }
+
+      const clubMatches = state.matches.filter(m => m.homeTeam === team.name || m.awayTeam === team.name);
+      const recentBox = document.getElementById('cp-recent-matches-box');
+      if (clubMatches.length > 0) {
+        recentBox.innerHTML = `<div class="text-xs font-bold uppercase text-slate-400 mb-1">Kulübün Son İşlenen Maçları</div>` +
+          clubMatches.map(cm => `
+            <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+              <span>${cm.date} • ${cm.compName}</span>
+              <span class="font-bold text-white mono-num">${cm.homeTeam} ${cm.score} ${cm.awayTeam}</span>
+            </div>
+          `).join('');
+      } else {
+        recentBox.innerHTML = '';
+      }
+
+      const ctx = document.getElementById('chart-cp-history');
+      if (ctx && typeof Chart !== 'undefined') {
+        if (chartCpHistory) chartCpHistory.destroy();
+        chartCpHistory = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['2021/22', '2022/23', '2023/24', '2024/25', '2025/26 (Güncel)'],
+            datasets: [{
+              label: `${team.name} Kulüp Elo Geçmişi`,
+              data: team.histElo,
+              borderColor: '#059669',
+              backgroundColor: 'rgba(5, 150, 105, 0.14)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#64748b', font: { size: 11 } } } },
+            scales: {
+              x: { ticks: { color: '#64748b' } },
+              y: { ticks: { color: '#64748b' } }
+            }
+          }
+        });
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // SAYFA 5: OYUNCU PROFİLİ SAYFASI
+    // -----------------------------------------------------------------------
+    function openPlayerProfile(playerId) {
+      state.activeProfilePlayerId = Number(playerId);
+      const sel = document.getElementById('pp-player-select');
+      if (sel) sel.value = String(playerId);
+      renderPlayerProfilePage(playerId);
+      switchTab('player-profile');
+    }
+
+    function renderPlayerProfilePage(playerId) {
+      const p = state.players.find(x => x.id === Number(playerId)) || state.players[0];
+      if (!p) return;
+      state.activeProfilePlayerId = p.id;
+      const team = state.teams.find(t => t.id === p.teamId);
+      const posCfg = POS_PARAMS[p.pos] || POS_PARAMS.FW;
+
+      const sortedAll = state.players.slice().sort((a, b) => b.marketValue - a.marketValue);
+      const worldRank = sortedAll.findIndex(x => x.id === p.id) + 1;
+      const posRank = sortedAll.filter(x => x.pos === p.pos).findIndex(x => x.id === p.id) + 1;
+
+      const initials = p.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      document.getElementById('pp-avatar-initials').textContent = initials;
+      document.getElementById('pp-rank-badge').textContent = `#${worldRank} Dünya • #${posRank} ${p.pos}`;
+      document.getElementById('pp-name').textContent = p.name;
+
+      const clubLink = document.getElementById('pp-club-link');
+      clubLink.textContent = team ? `${team.name} (${team.league})` : '';
+      clubLink.setAttribute('onclick', `openClubProfile(${team ? team.id : 1})`);
+
+      document.getElementById('pp-pos-label').textContent = posCfg.label;
+      document.getElementById('pp-nat-label').textContent = `Uyruk: ${p.nat || '-'}`;
+      document.getElementById('pp-elo-rating').textContent = `${p.elo.toFixed(0)} Elo • ${p.avgRating.toFixed(2)} Puan`;
+      document.getElementById('pp-peak-mv').textContent = `En Yüksek Değer: ${fmtEur(p.peakMarketValue)}`;
+      document.getElementById('pp-current-mv').textContent = fmtEur(p.marketValue);
+      document.getElementById('pp-last-delta').textContent = `Son Maç (${p.lastMatchLabel || 'Güncel'}): ${(p.lastMvDelta >= 0 ? '+' : '') + fmtEur(p.lastMvDelta)}`;
+
+      document.getElementById('pp-bio-grid').innerHTML = `
+        <div class="py-2.5 flex justify-between"><span class="text-slate-400">Tam Adı:</span><span class="font-bold text-white">${p.name}</span></div>
+        <div class="py-2.5 flex justify-between"><span class="text-slate-400">Doğum Tarihi / Yaş:</span><span class="font-semibold text-white mono-num">${p.birth} (${p.age.toFixed(1)} yaş)</span></div>
+        <div class="py-2.5 flex justify-between"><span class="text-slate-400">Uyruk / Kullandığı Ayak:</span><span class="font-semibold text-white">${p.nat || '-'} • ${p.foot || 'Sağ'} Ayak</span></div>
+        <div class="py-2.5 flex justify-between"><span class="text-slate-400">Mevki:</span><span class="font-semibold text-emerald-400">${posCfg.label}</span></div>
+        <div class="py-2.5 flex justify-between"><span class="text-slate-400">Güncel Kulüp (2026/27):</span><button onclick="openClubProfile(${team ? team.id : 1})" class="font-bold text-cyan-400 hover:underline">${team ? team.name : ''}</button></div>
+        <div class="py-2.5 flex justify-between"><span class="text-slate-400">Sözleşme Bitiş Tarihi:</span><span class="font-semibold text-white mono-num">${p.contract} (${p.contractYears.toFixed(1)} Yıl kaldı)</span></div>
+        <div class="py-2.5 flex justify-between"><span class="text-slate-400">2022 Başlangıç Değeri:</span><span class="font-semibold text-slate-300 mono-num">${fmtEur(Math.round(p.histMvM[0] * 1e6))}</span></div>
+      `;
+
+      document.getElementById('pp-multipliers-grid').innerHTML = `
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-slate-400">Yaş & Potansiyel ($A_{factor}$)</div>
+          <div class="text-sm font-bold text-amber-400 mono-num mt-0.5">${p.dmv.aFactor.toFixed(2)}x</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-slate-400">Performans Trendi ($F_{trend}$)</div>
+          <div class="text-sm font-bold text-cyan-400 mono-num mt-0.5">${p.dmv.fTrend.toFixed(2)}x</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-slate-400">Lig Zorluk Çarpanı ($M_{tier}$)</div>
+          <div class="text-sm font-bold text-white mono-num mt-0.5">${p.dmv.mTier.toFixed(2)}x</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-slate-400">Sözleşme Çarpanı ($C_{contract}$)</div>
+          <div class="text-sm font-bold text-emerald-400 mono-num mt-0.5">${p.dmv.cContract.toFixed(2)}x</div>
+        </div>
+      `;
+
+      const pHist = state.mvHistory.filter(h => h.playerId === p.id);
+      const histTbody = document.getElementById('pp-history-tbody');
+      histTbody.innerHTML = pHist.slice().reverse().map(h => {
+        const dSign = h.mvDelta >= 0 ? '+' : '';
+        const dCls = h.mvDelta >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        const eSign = h.eloDelta >= 0 ? '+' : '';
+        return `
+          <tr>
+            <td class="py-2 px-3">${h.date} • ${h.compName}</td>
+            <td class="py-2 px-3 font-semibold text-white">${h.matchLabel}</td>
+            <td class="py-2 px-2 text-center font-bold text-amber-400">${h.rating.toFixed(2)}</td>
+            <td class="py-2 px-2 text-right ${h.eloDelta >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${eSign}${h.eloDelta.toFixed(2)}</td>
+            <td class="py-2 px-3 text-right font-bold text-white">${fmtEur(h.mvAfter)}</td>
+            <td class="py-2 px-3 text-right font-semibold ${dCls}">${dSign}${fmtEur(h.mvDelta)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const ctx = document.getElementById('chart-pp-history');
+      if (ctx && typeof Chart !== 'undefined') {
+        if (chartPpHistory) chartPpHistory.destroy();
+        chartPpHistory = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: pHist.map(h => h.date),
+            datasets: [
+              {
+                label: 'Piyasa Değeri (Milyon €)',
+                data: pHist.map(h => Number((h.mvAfter / 1e6).toFixed(2))),
+                borderColor: '#059669',
+                backgroundColor: 'rgba(5, 150, 105, 0.15)',
+                fill: true,
+                yAxisID: 'y',
+                tension: 0.3,
+                pointRadius: 5
+              },
+              {
+                label: 'Bireysel Elo Puanı',
+                data: pHist.map(h => h.eloAfter),
+                borderColor: '#d97706',
+                borderDash: [4, 4],
+                yAxisID: 'y1',
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#64748b', font: { size: 11 } } } },
+            scales: {
+              x: { ticks: { color: '#64748b' } },
+              y: { type: 'linear', position: 'left', ticks: { color: '#059669' } },
+              y1: { type: 'linear', position: 'right', ticks: { color: '#d97706' }, grid: { drawOnChartArea: false } }
+            }
+          }
+        });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initAppState();
+    });
+  </script>
+</body>
+</html>
